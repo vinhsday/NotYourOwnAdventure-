@@ -5,11 +5,13 @@
 #include "Projectile.h"
 #include "Game.h"
 #include <vector>
+#include "Level.h"
+#include "Timer.h"
 
 class Projectile;
 class Unit;
 class Game;  // Khai báo trước để tránh lỗi
-
+class Level;
 
 
 enum class PlayerState {
@@ -39,10 +41,18 @@ public:
     int getMaxHP() { return maxHP; }
     int getCurrentMP() { return currentMP; }
     int getMaxMP() { return maxMP; }
-    int getGold() { return gold; }
 
     void removeHealth(int damage);
 
+    void increaseHealth();
+
+    void levelUp();
+
+    void collectCoin(int amount);
+
+    int getLastDirection(){return lastDirection;}
+
+    int currentMP = 50;
 
 private:
     Vector2D pos;
@@ -89,11 +99,12 @@ private:
 
     Game* game;
 
+    int attackDamage = 10;
     int maxHP = 100;
     int currentHP = 100;
     int maxMP = 50;
-    int currentMP = 50;
-    int gold = 0;
+    int coin = 0;
+    int level = 1;
 
     Timer damageCooldown = Timer(1.0f); // 1 giây giữa mỗi lần nhận damage
 

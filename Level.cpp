@@ -1,12 +1,16 @@
 #include "Level.h"
 #include <iostream>
+#include "Player.h"
+
 
 
 Level::Level(SDL_Renderer* renderer, int setTileCountX, int setTileCountY)
     : tileCountX(setTileCountX), tileCountY(setTileCountY),
-      targetX(setTileCountX / 2), targetY(setTileCountY / 2) {
+    targetX(setTileCountX / 2), targetY(setTileCountY / 2){
+    lastPotionSpawnTime = std::chrono::steady_clock::now() - std::chrono::seconds(15);
     textureGrass = TextureLoader::loadTexture(renderer, "grass.jpg");
-
+    potionHealthTexture = TextureLoader::loadTexture(renderer, "potion.png");
+    potionManaTexture = TextureLoader::loadTexture(renderer, "Health_potion.png");
     // Load đồ vật trang trí
     decorTextures.push_back(TextureLoader::loadTexture(renderer, "Autumn_tree1.png"));
     decorTextures.push_back(TextureLoader::loadTexture(renderer, "Autumn_tree1.png"));
@@ -24,6 +28,8 @@ Level::Level(SDL_Renderer* renderer, int setTileCountX, int setTileCountY)
     setTileType(xMax, yMax, TileType::enemySpawner);
 
     calculateFlowField();
+
+    spawnPotions();
 }
 
 
@@ -59,16 +65,67 @@ void Level::generateDecorPositions() {
 
 
 void Level::draw(SDL_Renderer* renderer, int tileSize, float camX, float camY) {
+    if (std::chrono::steady_clock::now() - lastPotionSpawnTime >= std::chrono::seconds(15)) {
+        spawnPotions();
+        lastPotionSpawnTime = std::chrono::steady_clock::now();
+    }
+
     for (int y = 0; y < tileCountY; y++) {
         for (int x = 0; x < tileCountX; x++) {
             SDL_Rect rect = { x * tileSize - camX, y * tileSize - camY, tileSize, tileSize };
             SDL_RenderCopy(renderer, textureGrass, NULL, &rect);
         }
     }
+
+    // Vẽ potion
+    drawPotions(renderer, camX, camY);
 }
 
 
+void Level::spawnPotions() {
+    int numPotions = 2;
+    float minSpacing = 3.0f;
+    int maxAttempts = 100;
 
+    for (int i = 0; i < numPotions; i++) {
+        bool validPosition = false;
+        Vector2D newPotion;
+
+        int attempts = 0;
+        while (!validPosition && attempts < maxAttempts) {
+            int randX = rand() % tileCountX;
+            int randY = rand() % tileCountY;
+            newPotion = Vector2D(randX, randY);
+            validPosition = true;
+            attempts++;
+
+            // Kiểm tra vị trí không phải enemySpawner
+            if (getTileType(randX, randY) == TileType::enemySpawner) {
+                validPosition = false;
+                continue;
+            }
+
+            // Kiểm tra khoảng cách với các potion khác
+            for (auto& potion : potionPositions) {
+                if ((potion - newPotion).magnitude() < minSpacing) {
+                    validPosition = false;
+                    break;
+                }
+            }
+
+            // Nếu tìm thấy vị trí hợp lệ
+            if (validPosition) {
+                potionPositions.push_back(newPotion);
+
+                // Random loại potion
+                SDL_Texture* potionTexture = (rand() % 2 == 0) ? potionHealthTexture : potionManaTexture;
+                potionTextures.push_back(potionTexture);
+
+                std::cout << "Potion spawned at: (" << newPotion.x << ", " << newPotion.y << ")\n";
+            }
+        }
+    }
+}
 
 
 Vector2D Level::getRandomEnemySpawnerLocation() {
@@ -242,14 +299,52 @@ void Level::drawDecor(SDL_Renderer* renderer, float camX, float camY) {
         SDL_Texture* texture = decorTextures[i % decorTextures.size()];
 
         // Debug: In tọa độ để kiểm tra
-        std::cout << "🌳 Drawing decor " << i << " at: " << xPos << ", " << yPos << std::endl;
 
         SDL_RenderCopy(renderer, texture, NULL, &decorRect);
     }
 }
 
 
+void Level::drawPotions(SDL_Renderer* renderer, float camX, float camY) {
+    for (size_t i = 0; i < potionPositions.size(); i++) {
+        int xPos = (int)(potionPositions[i].x * 64 - camX * 64);
+        int yPos = (int)(potionPositions[i].y * 64 - camY * 64);
+        SDL_Rect potionRect = { xPos, yPos, 32, 32 };
 
+        // Hiển thị texture tùy loại potion
+        if (i % 2 == 0)
+            SDL_RenderCopy(renderer, potionHealthTexture, NULL, &potionRect);
+        else
+            SDL_RenderCopy(renderer, potionManaTexture, NULL, &potionRect);
+    }
+}
+
+
+void Level::checkPotionPickup(Vector2D characterPosition, Player* player) {
+    for (auto it = potionPositions.begin(); it != potionPositions.end();) {
+        Vector2D potionPos = *it;
+
+        // Kiểm tra khoảng cách giữa nhân vật và potion
+        if ((potionPos - characterPosition).magnitude() < 1.0f) { // 1.0f là khoảng cách va chạm
+
+            // Xác định loại potion
+            size_t index = std::distance(potionPositions.begin(), it);
+            if (potionTextures[index] == potionHealthTexture) {
+                player->increaseHealth(); // Tăng máu
+                std::cout << "🩹 Nhặt Health Potion, tăng máu!\n";
+            } else if (potionTextures[index] == potionManaTexture) {
+                player->levelUp(); // Tăng cấp
+                std::cout << "🌀 Nhặt Mana Potion, tăng cấp!\n";
+            }
+
+            // Xóa potion khỏi danh sách
+            it = potionPositions.erase(it);
+            potionTextures.erase(potionTextures.begin() + index);
+        } else {
+            ++it;
+        }
+    }
+}
 
 
 

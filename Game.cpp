@@ -3,11 +3,12 @@
 #include "HUD.h"
 #include "Orc.h"
 #include "Vampire.h"
+#include "Boss.h"
 
 
 Game::Game(SDL_Window* window, SDL_Renderer* renderer, int windowWidth, int windowHeight)
     : level(renderer, 30, 20), // Tăng kích thước bản đồ: 30x20 tile
-      spawnTimer(0.25f), roundTimer(5.0f) {
+      spawnTimer(0.25f), roundTimer(5.0f), renderer_(renderer) {
     player = new Player(this, renderer, Vector2D(15, 10)); // Đặt nhân vật ở giữa bản đồ
 
     hud = new HUD(renderer, player);
@@ -77,8 +78,26 @@ void Game::processEvents(SDL_Renderer* renderer, bool& running) {
         }
 
     const Uint8* keyState = SDL_GetKeyboardState(NULL);
-    if (keyState[SDL_SCANCODE_1]) hud->useSkill(0);
-    if (keyState[SDL_SCANCODE_2]) hud->useSkill(1);
+    if (keyState[SDL_SCANCODE_1]) {
+        if (hud->skills[0].ready()) { // Kiểm tra kỹ năng lửa sẵn sàng
+            hud->useSkill(0); // Kích hoạt kỹ năng
+            // Offset dựa trên hướng cuối cùng của nhân vật
+            Vector2D offset = (player->getLastDirection() == 1) ? Vector2D(2.0f, -0.5f) : Vector2D(-3.0f, -0.5f);
+            Vector2D firePos = player->getPos() + offset; // Cách nhân vật 1 đơn vị theo hướng
+            FireEffect fireEffect(renderer, firePos);
+            addFireEffect(fireEffect); // Thêm hiệu ứng lửa
+            player->currentMP -= 10;
+        }
+
+    }
+    if (keyState[SDL_SCANCODE_2]) {
+        if (hud->skills[1].ready()) { // Kỹ năng băng là skill thứ 2
+            hud->useSkill(1);
+            Vector2D icePos = player->getPos() + Vector2D(0.0f, 1.0f);
+            IceEffect iceEffect(renderer, icePos);
+            addIceEffect(iceEffect);
+        }
+    }
     player->handleInput(keyState, renderer);
 }
 
@@ -91,9 +110,17 @@ void Game::update(SDL_Renderer* renderer, float dT, Level& level) {
     //Update the units.
     updateUnits(dT);
 
+
+    // Cập nhật coin
+    for (auto& coin : coins) {
+        coin->update(dT);
+    }
     //Update the projectiles.
     updateProjectiles(dT);
 
+    updateFireEffects(dT);
+
+    updateIceEffects(dT);
 
 
     updateSpawnUnitsIfRequired(renderer, dT);
@@ -102,10 +129,18 @@ void Game::update(SDL_Renderer* renderer, float dT, Level& level) {
 
     hud->update(dT);
 
+    level.checkPotionPickup(player->getPos(), player);
+
+
+
 
     updateCamera();
 
-    std::cout << "📸 updateCamera() CALLED" << std::endl;
+    if (!bossSpawned && spawnUnitCount == 0 && allEnemiesDead()) {
+    std::cout << "Tất cả quái đã chết! Spawn boss...\n";
+    triggerBossSpawn();
+}
+
 
 }
 
@@ -152,13 +187,12 @@ void Game::updateProjectiles(float dT) {
 
 
 void Game::updateSpawnUnitsIfRequired(SDL_Renderer* renderer, float dT) {
-    // Nếu không còn quái trên màn hình và đã hết số lượng spawn -> Bắt đầu vòng mới
-    if (listUnits.empty() && spawnUnitCount == 0) {
-        roundTimer.countDown(dT);
-        if (roundTimer.timeSIsZero()) {
-            spawnUnitCount = 15;  // Mỗi vòng spawn 15 quái
-            roundTimer.resetToMax();
-        }
+    static bool roundStarted = false; // Biến để theo dõi trạng thái vòng đấu
+
+    // Nếu đây là vòng đầu tiên, bắt đầu ngay lập tức
+    if (!roundStarted) {
+        spawnUnitCount = 15;  // Chỉ spawn 15 quái duy nhất
+        roundStarted = true;
     }
 
     // Chỉ spawn quái nếu còn số lượng cần spawn và đủ thời gian chờ
@@ -178,10 +212,9 @@ void Game::updateSpawnUnitsIfRequired(SDL_Renderer* renderer, float dT) {
         addUnit(renderer, spawnPos);
         spawnUnitCount--; // Giảm số lượng quái cần spawn
 
-        std::cout << "Spawn enemy at: " << spawnPos.x << ", " << spawnPos.y
-                  << " | Remaining: " << spawnUnitCount << std::endl;
+        }
     }
-}
+
 
 
 
@@ -202,12 +235,23 @@ void Game::draw(SDL_Renderer* renderer) {
     for (auto& projectileSelected : listProjectiles)
         projectileSelected.draw(renderer, tileSize, cameraPos);
 
+    for (auto& fireEffect : listFireEffects) // Vẽ hiệu ứng lửa
+        fireEffect.draw(renderer, tileSize, cameraPos);
+
+    for (auto& iceEffect : listIceEffects) // Vẽ hiệu ứng băng
+        iceEffect.draw(renderer, tileSize, cameraPos);
+
     player->draw(renderer, tileSize, cameraPos);
 
     level.drawDecor(renderer, cameraPos.x, cameraPos.y);
 
      // ⭐ Thêm thanh máu và mana của người chơi ⭐
     hud->draw(renderer);
+
+    for (auto& coin : coins) {
+    coin->draw(renderer, tileSize, cameraPos);
+}
+
 
     SDL_RenderPresent(renderer);
 }
@@ -230,7 +274,6 @@ void Game::addUnit(SDL_Renderer* renderer, Vector2D posMouse) {
 
 void Game::updateCamera() {
     Vector2D targetPos = player->getPos();
-    std::cout << "🧑 Player Pos: " << targetPos.x << ", " << targetPos.y << std::endl;
 
     // Tính vị trí mục tiêu của camera
     Vector2D targetCameraPos;
@@ -251,6 +294,58 @@ void Game::updateCamera() {
     if (cameraPos.x > maxCameraX) cameraPos.x = maxCameraX;
     if (cameraPos.y > maxCameraY) cameraPos.y = maxCameraY;
 
-    std::cout << "🎥 Camera Pos: " << cameraPos.x << ", " << cameraPos.y << std::endl;
 }
 
+
+bool Game::allEnemiesDead() {
+    for (auto& unit : listUnits) {
+        if (unit->isAlive()) return false;
+    }
+    return true;
+}
+
+
+void Game::triggerBossSpawn() {
+    std::cout << "Boss xuất hiện! Hiệu ứng rung đất!\n";
+    for (int i = 0; i < 10; i++) {
+        cameraPos.x += (i % 2 == 0) ? 0.5f : -0.5f;
+        SDL_Delay(30);
+    }
+    spawnBoss();
+}
+
+void Game::spawnBoss() {
+    std::cout << "Boss đã xuất hiện tại vị trí cố định!\n";
+    Vector2D bossPosition = player->getPos() - Vector2D(5,5); // Đặt vị trí boss cố định
+    auto boss = std::make_shared<Boss>(renderer_, bossPosition);
+    listUnits.push_back(boss);
+    bossSpawned = true;
+
+    std::cout << "Boss HP: " << boss->getHealth() << "\n"; // Kiểm tra HP
+}
+
+
+void Game::updateFireEffects(float dT) {
+    auto it = listFireEffects.begin();
+    while (it != listFireEffects.end()) {
+        it->update(dT, listUnits);
+        if (it->isFinished()) {
+            it = listFireEffects.erase(it);
+        } else {
+            ++it;
+        }
+    }
+}
+
+
+void Game::updateIceEffects(float dT) {
+    auto it = listIceEffects.begin();
+    while (it != listIceEffects.end()) {
+        it->update(dT, listUnits);
+        if (it->isFinished()) {
+            it = listIceEffects.erase(it);
+        } else {
+            ++it;
+        }
+    }
+}

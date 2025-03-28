@@ -13,11 +13,6 @@ Projectile::Projectile(SDL_Renderer* renderer, Vector2D setPos, Vector2D setDire
 
     texture = TextureLoader::loadTexture(renderer, "Fire.png");
 
-    if (!texture) {
-        std::cout << "Error: Failed to load Fire.png" << std::endl;
-    } else {
-        std::cout << "Successfully loaded Fire.png for projectile!" << std::endl;
-    }
 }
 
 
@@ -45,13 +40,8 @@ void Projectile::update(float dT, std::vector<std::shared_ptr<Unit>>& listUnits)
         collisionOccurred = true;
     }
 
-    for (auto& unit : listUnits) {
-        if (unit && (unit->getPos() - pos).magnitude() < size) {
-            unit->takeDamage(1);
-            collisionOccurred = true;
-            break;
-        }
-    }
+
+
 }
 
 
@@ -70,7 +60,6 @@ void Projectile::draw(SDL_Renderer* renderer, int tileSize, Vector2D cameraPos) 
                       (int)(pos.y * tileSize) - frameHeight / 2 - (int)(cameraPos.y * tileSize),
                       frameWidth, frameHeight };
 
-    std::cout << "🔥 Drawing projectile at: " << destRect.x << ", " << destRect.y << std::endl;
     SDL_RenderCopy(renderer, texture, &srcRect, &destRect);
 }
 
@@ -87,16 +76,4 @@ bool Projectile::getCollisionOccurred() {
 
 
 
-void Projectile::checkCollisions(std::vector<std::shared_ptr<Unit>>& listUnits) {
-	//Check for a collision with any of the units.
-	if (collisionOccurred == false) {
-		//Check if this overlaps any of the enemy units or not.
-		for (int count = 0; count < listUnits.size() && collisionOccurred == false; count++) {
-			auto& unitSelected = listUnits[count];
-			if (unitSelected != nullptr && unitSelected->checkOverlap(pos, size)) {
-				unitSelected->takeDamage(1);
-				collisionOccurred = true;
-			}
-		}
-	}
-}
+

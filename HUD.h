@@ -29,9 +29,9 @@ public:
     void draw(SDL_Renderer* renderer);
     void addSkill(SDL_Texture* icon, float maxCooldown);
     void useSkill(int index);
-
+    std::vector<Skill> skills;
 private:
     Player* player;
     SDL_Texture* playerAvatar;
-    std::vector<Skill> skills;
+
 };

@@ -7,9 +7,12 @@
 #include "TextureLoader.h"
 #include "Timer.h"
 #include "Player.h"
+#include "Level.h"
 class Game;
 
 class Player;
+
+class Level;
 
 enum class UnitState {
     Run,
@@ -26,19 +29,26 @@ class Unit
 public:
 	Unit(SDL_Renderer* renderer, Vector2D setPos);
 	virtual void update(float dT, Level& level, std::vector<std::shared_ptr<Unit>>& listUnits, Player& player );
-	void draw(SDL_Renderer* renderer, int tileSize, Vector2D cameraPos);
+	virtual void draw(SDL_Renderer* renderer, int tileSize, Vector2D cameraPos);
 	bool checkOverlap(Vector2D posOther, float sizeOther);
 	bool isAlive();
 	Vector2D getPos();
-	void takeDamage(int damage);
+	void takeDamage(int damage, Game* game);
 	bool isDead();
 	void setState(UnitState state_);
 	int getFrameCount();
 	int getColumnCount();
 	SDL_Texture* getTextureForState();
 
+    float getFrameTime();
+
+   bool isFrozen() const { return frozen; }
+   void setFrozen(bool value) { frozen = value; }
+protected:
+    	Vector2D pos;
+        UnitState state = UnitState::Run; // Mặc định là chạy
+
 private:
-	Vector2D pos;
 	static const float size;
 	SDL_Texture* texture = nullptr;
 
@@ -53,7 +63,6 @@ private:
     Timer timerDeath = Timer(0.7f);
     bool isdead = false;
 
-    UnitState state = UnitState::Run; // Mặc định là chạy
     int frame = 0;
     int frameCount = 10;
     float frameTime = 0.1f;
@@ -65,6 +74,10 @@ private:
     Timer damageCooldown = Timer(1.0f); // 1 giây giữa mỗi lần gây sát thương
 
     float hurtTimer = 0.0f;
+
+    Game* game;
+
+    bool frozen = false;
 
 
 protected:

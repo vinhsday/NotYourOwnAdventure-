@@ -17,7 +17,6 @@ Player::Player(Game* gamePtr, SDL_Renderer* renderer, Vector2D startPos)
 
     if (!textureIdleLeft || !textureRunLeft || !textureAttack1 ||
         !textureRunRight ) {
-        std::cout << "Error: Failed to load one or more player spritesheets!" << std::endl;
     }
 }
 
@@ -46,6 +45,8 @@ void Player::handleInput(const Uint8* keyState, SDL_Renderer* renderer) {
         if (left)  direction.x -= 1;
         if (right) direction.x += 1;
     }
+
+
 
 
 
@@ -82,7 +83,6 @@ void Player::update(float dT,
 
         if (deathTimer.timeSIsZero()) {
             // Xử lý sau khi chết xong (biến mất, hồi sinh, hoặc load màn mới)
-            std::cout << "Player is dead!\n";
         }
         return;
     }
@@ -206,8 +206,8 @@ void Player::update(float dT,
     if (damageCooldown.timeSIsZero()) { // Chỉ cho phép gây damage khi cooldown về 0
         for (auto& unit : listUnits) {
             float distance = (unit->getPos() - pos).magnitude();
-            if (distance < 1.5f) { // Phạm vi đánh
-                unit->takeDamage(10);
+            if (distance < attackRange) { // Phạm vi đánh
+                unit->takeDamage(attackDamage, game);
                 damageCooldown.resetToMax(); // Bắt đầu thời gian hồi cho lần đánh tiếp theo
 
             }
@@ -228,6 +228,18 @@ void Player::update(float dT,
 
     // Giữ HP trong giới hạn
     if (currentHP > maxHP) currentHP = maxHP;
+
+
+     // Kiểm tra va chạm với coin
+    for (auto it = game->coins.begin(); it != game->coins.end(); ) {
+        if ((*it)->checkCollision(pos, 1.0f)) { // Phạm vi 1.0f
+            collectCoin((*it)->getValue());
+            it = game->coins.erase(it); // Xóa coin sau khi thu thập
+        } else {
+            ++it;
+        }
+    }
+
 }
 
 
@@ -299,7 +311,19 @@ void Player::removeHealth(int damage) {
     }
 }
 
+void Player::increaseHealth() {
+    currentHP = maxHP;
+}
 
+void Player::levelUp() {
+    level++;
+    attackDamage += 5;
+    std::cout << "🟢 Level Up! Cấp hiện tại: " << level << "\n";
+}
+
+void Player::collectCoin(int amount) {
+    coin += amount;
+}
 
 
 

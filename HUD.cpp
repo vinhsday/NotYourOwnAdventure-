@@ -54,19 +54,7 @@ void HUD::draw(SDL_Renderer* renderer) {
     SDL_RenderCopy(renderer, playerAvatar, NULL, &avatarRect);
 
     // 💰 Hiển thị tiền (cần font chữ SDL_ttf)
-    TTF_Font* font = TTF_OpenFont("Data/Font/ThaleahFat.ttf", 24);
-    if (font) {
-        SDL_Color color = { 255, 255, 255 };
-        std::string moneyText = "Gold: " + std::to_string(player->getGold());
-        SDL_Surface* textSurface = TTF_RenderText_Solid(font, moneyText.c_str(), color);
-        SDL_Texture* textTexture = SDL_CreateTextureFromSurface(renderer, textSurface);
-        SDL_Rect textRect = { 350, 20, textSurface->w, textSurface->h };
-        SDL_RenderCopy(renderer, textTexture, NULL, &textRect);
 
-        SDL_FreeSurface(textSurface);
-        SDL_DestroyTexture(textTexture);
-        TTF_CloseFont(font);
-    }
 
     // 🎯 Hiển thị skill ở góc dưới trái màn hình
     int x = 50, y = 500;

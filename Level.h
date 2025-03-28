@@ -5,8 +5,10 @@
 #include "SDL.h"
 #include "Vector2D.h"
 #include "TextureLoader.h"
-
-
+#include <chrono>
+#include <vector>
+#include "Coin.h"
+class Player;
 
 class Level
 {
@@ -41,6 +43,11 @@ public:
 
     void generateDecorPositions();
 
+    void spawnPotions();
+
+    void drawPotions(SDL_Renderer* renderer, float camX, float camY);
+
+    void checkPotionPickup(Vector2D characterPosition, Player* player);
 
 
 
@@ -52,15 +59,26 @@ private:
 	void calculateFlowDirections();
 
 
+
 	std::vector<Tile> listTiles;
 	const int tileCountX, tileCountY;
 
 	const int targetX = 0, targetY = 0;
 
+
 	private:
     SDL_Texture* textureGrass = nullptr;
     std::vector<SDL_Texture*> decorTextures;
     std::vector<Vector2D> decorPositions;
+    std::vector<Vector2D> potionPositions;
+    std::vector<SDL_Texture*> potionTextures;
 
+
+    SDL_Texture* potionHealthTexture = nullptr;
+    SDL_Texture* potionManaTexture = nullptr;
+
+    std::chrono::steady_clock::time_point lastPotionSpawnTime;
+
+    std::vector<Coin> coins;
 
 };

@@ -34,10 +34,18 @@
 			<Add option="-Wall" />
 			<Add option="-fexceptions" />
 		</Compiler>
+		<Unit filename="Boss.cpp" />
+		<Unit filename="Boss.h" />
+		<Unit filename="Coin.cpp" />
+		<Unit filename="Coin.h" />
+		<Unit filename="FireEffect.cpp" />
+		<Unit filename="FireEffect.h" />
 		<Unit filename="Game.cpp" />
 		<Unit filename="Game.h" />
 		<Unit filename="HUD.cpp" />
 		<Unit filename="HUD.h" />
+		<Unit filename="IceEffect.cpp" />
+		<Unit filename="IceEffect.h" />
 		<Unit filename="Level.cpp" />
 		<Unit filename="Level.h" />
 		<Unit filename="Orc.cpp" />
