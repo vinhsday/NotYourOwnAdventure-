@@ -5,7 +5,7 @@ public:
     Boss(SDL_Renderer* renderer, Vector2D spawnPos);
     void update(float dT, Level& level, std::vector<std::shared_ptr<Unit>>& listUnits, Player& player) override;
     void draw(SDL_Renderer* renderer, int tileSize, Vector2D cameraPos) override;
-    int getHealth() { return health; };
+    int getHealth() { return health; }
 
 private:
     void loadAnimations(SDL_Texture* spriteSheet, std::vector<SDL_Rect>& frames, int frameCount);

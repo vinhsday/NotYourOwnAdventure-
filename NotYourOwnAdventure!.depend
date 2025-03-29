@@ -144,15 +144,16 @@
 1743087291 c:\users\admin\onedrive - vnu.edu.vn\advanced programming\defensemytower!\vampire.h
 	"Unit.h"
 
-1743176813 source:c:\users\admin\onedrive - vnu.edu.vn\advanced programming\notyourownadventure!\game.cpp
+1743232665 source:c:\users\admin\onedrive - vnu.edu.vn\advanced programming\notyourownadventure!\game.cpp
 	"Game.h"
 	<iostream>
 	"HUD.h"
 	"Orc.h"
 	"Vampire.h"
 	"Boss.h"
+	<SDL_ttf.h>
 
-1743176704 c:\users\admin\onedrive - vnu.edu.vn\advanced programming\notyourownadventure!\game.h
+1743232693 c:\users\admin\onedrive - vnu.edu.vn\advanced programming\notyourownadventure!\game.h
 	<vector>
 	<chrono>
 	<memory>
@@ -198,7 +199,7 @@
 
 1742995983 c:\users\admin\onedrive - vnu.edu.vn\advanced programming\notyourownadventure!\timer.h
 
-1743170755 c:\users\admin\onedrive - vnu.edu.vn\advanced programming\notyourownadventure!\player.h
+1743232843 c:\users\admin\onedrive - vnu.edu.vn\advanced programming\notyourownadventure!\player.h
 	"SDL.h"
 	"Vector2D.h"
 	"TextureLoader.h"
@@ -245,7 +246,7 @@
 1743089219 source:c:\users\admin\onedrive - vnu.edu.vn\advanced programming\notyourownadventure!\orc.cpp
 	"Orc.h"
 
-1743169220 source:c:\users\admin\onedrive - vnu.edu.vn\advanced programming\notyourownadventure!\player.cpp
+1743233257 source:c:\users\admin\onedrive - vnu.edu.vn\advanced programming\notyourownadventure!\player.cpp
 	"Player.h"
 	"iostream"
 
@@ -284,7 +285,7 @@
 1743174485 source:c:\users\admin\onedrive - vnu.edu.vn\advanced programming\notyourownadventure!\boss.cpp
 	"Boss.h"
 
-1743174861 c:\users\admin\onedrive - vnu.edu.vn\advanced programming\notyourownadventure!\boss.h
+1743219267 c:\users\admin\onedrive - vnu.edu.vn\advanced programming\notyourownadventure!\boss.h
 	"Unit.h"
 
 1743171525 c:\users\admin\onedrive - vnu.edu.vn\advanced programming\notyourownadventure!\fireeffect.h

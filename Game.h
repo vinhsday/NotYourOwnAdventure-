@@ -53,6 +53,17 @@ public:
         listIceEffects.push_back(effect);
     }
 
+    bool showMenu(SDL_Renderer* renderer);
+
+    bool showAboutScreen(SDL_Renderer* renderer);
+
+    void renderText(SDL_Renderer* renderer, const std::string& text, int x, int y, int fontSize);
+
+    void showGameOverMenu(SDL_Renderer* renderer);
+
+    void restartGame();
+
+
 
 private:
 	void processEvents(SDL_Renderer* renderer, bool& running);
@@ -91,6 +102,8 @@ private:
 
     std::vector<IceEffect> listIceEffects; // Danh sách hiệu ứng băng
     void updateIceEffects(float dT);
+
+    bool gameOver = false;
 
 
 

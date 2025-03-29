@@ -54,6 +54,19 @@ public:
 
     int currentMP = 50;
 
+    bool isDead = false;
+
+
+    Timer deathTimer = Timer(2.0f);
+
+    int frame = 0;
+    int frameCount = 8; // 8 frame mỗi animation
+    float frameTime = 0.07f;
+    float frameTimer = 0.0f;
+
+    void reset();
+
+
 private:
     Vector2D pos;
     Vector2D direction;
@@ -79,10 +92,6 @@ private:
 
 private:
     PlayerState state = PlayerState::IdleRight; // Mặc định là đứng yên
-    int frame = 0;
-    int frameCount = 8; // 8 frame mỗi animation
-    float frameTime = 0.07f;
-    float frameTimer = 0.0f;
     int spriteWidth = 2000;  // Kích thước toàn bộ spritesheet
     int spriteHeight = 250;
     int frameWidth = spriteWidth / 8;  // Kích thước của một frame = 2000/8 = 250px
@@ -115,8 +124,6 @@ private:
     PlayerState prevStateBeforeHurt;
     int prevFrameBeforeHurt;
 
-    Timer deathTimer = Timer(2.0f);
-    bool isDead = false;
 
 
 };

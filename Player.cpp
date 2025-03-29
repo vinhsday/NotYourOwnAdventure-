@@ -325,6 +325,23 @@ void Player::collectCoin(int amount) {
     coin += amount;
 }
 
+void Player::reset() {
+    // Đặt lại trạng thái ban đầu của nhân vật
+    currentHP = maxHP;
+    currentMP = maxMP;
+    pos = Vector2D(15, 10); // Ví dụ: Đặt lại vị trí trung tâm hoặc vị trí spawn
+    isDead = false;
+    frame = 0;
+    state = PlayerState::IdleRight; // Đặt lại trạng thái idle
+    shootCooldown.resetToMax();
+    damageCooldown.resetToMax();
+    hurtTimer.resetToMax();
+    deathTimer.resetToMax();
+    coin = 0;
+    level = 1;
+    attackDamage = 10; // Hoặc giá trị mặc định ban đầu
+    std::cout << "🟢 Nhân vật đã được hồi sinh!\n";
+}
 
 
 
