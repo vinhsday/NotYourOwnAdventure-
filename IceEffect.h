@@ -28,7 +28,7 @@ private:
     SDL_Texture* textureDisappear = nullptr; // Sprite sheet khi biến mất
 
     Timer durationTimer = Timer(0.5f); // Thời gian mỗi trạng thái (0.5s x 3 = 1.5s tổng)
-    Timer freezeTimer = Timer(4.0f);   // Thời gian đóng băng quái (2 giây)
+    Timer freezeTimer = Timer(2.0f);   // Thời gian đóng băng quái (2 giây)
     float frameTime = 0.1f;            // Mỗi frame 0.1 giây
     float frameTimer = 0.0f;
     int frame = 0;

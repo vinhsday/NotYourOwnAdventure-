@@ -48,7 +48,7 @@ public:
 
     void levelUp();
 
-    void collectCoin(int amount);
+    int getCoins() const { return coin; }
 
     int getLastDirection(){return lastDirection;}
 

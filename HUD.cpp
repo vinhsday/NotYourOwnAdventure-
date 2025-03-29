@@ -81,4 +81,30 @@ void HUD::draw(SDL_Renderer* renderer) {
 
         x += iconSize + 10; // Dịch sang phải để hiển thị skill tiếp theo
     }
+
+    // Hiển thị coin
+     // Khởi tạo SDL_ttf
+    if (TTF_WasInit() == 0) {
+        if (TTF_Init() == -1) {
+            std::cout << "SDL_ttf Init Error: " << TTF_GetError() << "\n";
+            return;
+        }
+    }
+
+    // Mở font
+    TTF_Font* font = TTF_OpenFont("Data/Font/ThaleahFat.ttf", 16);
+    if (!font) {
+        std::cout << "Failed to load font: " << TTF_GetError() << "\n";
+        return;
+    }
+    SDL_Color color = {255, 255, 0};  // Màu vàng cho coin
+    std::string coinText = "Coins: " + std::to_string(player->getCoins());
+    SDL_Surface* coinSurface = TTF_RenderText_Solid(font, coinText.c_str(), color);
+    SDL_Texture* coinTexture = SDL_CreateTextureFromSurface(renderer, coinSurface);
+    SDL_Rect coinRect = {340, 30, coinSurface->w, coinSurface->h};
+    SDL_RenderCopy(renderer, coinTexture, NULL, &coinRect);
+    SDL_FreeSurface(coinSurface);
+    SDL_DestroyTexture(coinTexture);
+    TTF_CloseFont(font);
+
 }

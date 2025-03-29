@@ -5,6 +5,7 @@
 #include "Vampire.h"
 #include "Boss.h"
 #include <SDL_ttf.h>
+#include "AudioManager.h"
 
 
 
@@ -382,6 +383,7 @@ void Game::updateIceEffects(float dT) {
 
 bool Game::showMenu(SDL_Renderer* renderer) {
     bool inMenu = true;
+    AudioManager::playMusic("Data/Sound/Pixel2.ogg", -1);
     bool playSelected = false;
 
     SDL_Texture* background = TextureLoader::loadTexture(renderer, "menu_background.png");
@@ -595,25 +597,29 @@ void Game::showGameOverMenu(SDL_Renderer* renderer) {
     bool selecting = true;
     SDL_Event event;
 
-    SDL_Rect menuRect = { windowWidth / 2 - 100, windowHeight / 2 - 100, 200, 200 };
-    SDL_Texture* restartTexture = TextureLoader::loadTexture(renderer,"restart01.png" );
+    // Load ảnh khung nền
+    SDL_Texture* menuBackground = TextureLoader::loadTexture(renderer, "cut_frame_fixed.png");
+
+    SDL_Texture* restartTexture = TextureLoader::loadTexture(renderer, "restart01.png");
     SDL_Texture* quitTexture = TextureLoader::loadTexture(renderer, "back_button.png");
-    SDL_Texture* restartHoverTexture = TextureLoader::loadTexture(renderer,"restart03.png");
-    SDL_Texture* quitHoverTexture = TextureLoader::loadTexture(renderer,"back03.png");
+    SDL_Texture* restartHoverTexture = TextureLoader::loadTexture(renderer, "restart03.png");
+    SDL_Texture* quitHoverTexture = TextureLoader::loadTexture(renderer, "back03.png");
 
-      // Vị trí các nút
-        SDL_Rect retryButton = { windowWidth / 2 - 120, windowHeight / 2 - 20, 100, 40 };
-        SDL_Rect quitButton = { windowWidth / 2 + 20, windowHeight / 2 - 20, 100, 40 };
+    // Vị trí khung nền
+    SDL_Rect menuRect = { windowWidth / 2 - 200 , windowHeight / 2 - 120, 400, 120 };
 
+    // Vị trí các nút
+    SDL_Rect retryButton = { windowWidth / 2 - 150, windowHeight / 2 - 50, 100, 40 };
+    SDL_Rect quitButton = { windowWidth / 2 + 55, windowHeight / 2 - 50, 100, 40 };
 
     while (selecting) {
-                    int mouseX, mouseY;
-                    SDL_GetMouseState(&mouseX, &mouseY);
-                    bool isRestart =(    mouseX >= retryButton.x && mouseX <= retryButton.x + retryButton.w &&
-                        mouseY >= retryButton.y && mouseY <= retryButton.y + retryButton.h);
+        int mouseX, mouseY;
+        SDL_GetMouseState(&mouseX, &mouseY);
+        bool isRestart = (mouseX >= retryButton.x && mouseX <= retryButton.x + retryButton.w &&
+                          mouseY >= retryButton.y && mouseY <= retryButton.y + retryButton.h);
 
-                    bool isQuit = (mouseX >= quitButton.x && mouseX <= quitButton.x + quitButton.w &&
-                        mouseY >= quitButton.y && mouseY <= quitButton.y + quitButton.h);
+        bool isQuit = (mouseX >= quitButton.x && mouseX <= quitButton.x + quitButton.w &&
+                       mouseY >= quitButton.y && mouseY <= quitButton.y + quitButton.h);
 
         while (SDL_PollEvent(&event)) {
             switch (event.type) {
@@ -622,40 +628,37 @@ void Game::showGameOverMenu(SDL_Renderer* renderer) {
                     exit(0);
                     break;
                 case SDL_MOUSEBUTTONDOWN:
-                    // Restart
                     if (isRestart) {
                         restartGame();
                         selecting = false;
                     }
 
-                    // Quit
                     if (isQuit) {
                         showMenu(renderer);
                         selecting = false;
                         restartGame();
-
                     }
                     break;
             }
         }
 
-        // Vẽ menu thua
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 150);
-        SDL_RenderFillRect(renderer, &menuRect);
+        // Vẽ ảnh nền khung
+        SDL_RenderCopy(renderer, menuBackground, nullptr, &menuRect);
 
         // Vẽ chữ
-        renderText(renderer, "YOU LOST!", 140, 220, 24);
+        renderText(renderer, "YOU LOST!", windowWidth / 2 - 50, windowHeight / 2 - 80, 30);
 
-
-        SDL_RenderCopy(renderer, isRestart ? restartTexture : restartHoverTexture, nullptr, &retryButton);
-        SDL_RenderCopy(renderer, isQuit ? quitTexture : quitHoverTexture, nullptr, &quitButton);
-
+        // Vẽ các nút
+        SDL_RenderCopy(renderer, isRestart ? restartHoverTexture : restartTexture, nullptr, &retryButton);
+        SDL_RenderCopy(renderer, isQuit ? quitHoverTexture : quitTexture, nullptr, &quitButton);
 
         SDL_RenderPresent(renderer);
     }
-        // Giải phóng bộ nhớ
-        SDL_DestroyTexture(restartTexture);
-        SDL_DestroyTexture(quitTexture);
+
+    // Giải phóng bộ nhớ
+    SDL_DestroyTexture(menuBackground);
+    SDL_DestroyTexture(restartTexture);
+    SDL_DestroyTexture(quitTexture);
 }
 
 

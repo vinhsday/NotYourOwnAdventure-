@@ -232,8 +232,8 @@ void Player::update(float dT,
 
      // Kiểm tra va chạm với coin
     for (auto it = game->coins.begin(); it != game->coins.end(); ) {
-        if ((*it)->checkCollision(pos, 1.0f)) { // Phạm vi 1.0f
-            collectCoin((*it)->getValue());
+        if ((*it)->checkCollision(pos, 1.0f)) {
+             coin++;   // Phạm vi 1.0f
             it = game->coins.erase(it); // Xóa coin sau khi thu thập
         } else {
             ++it;
@@ -321,9 +321,7 @@ void Player::levelUp() {
     std::cout << "🟢 Level Up! Cấp hiện tại: " << level << "\n";
 }
 
-void Player::collectCoin(int amount) {
-    coin += amount;
-}
+
 
 void Player::reset() {
     // Đặt lại trạng thái ban đầu của nhân vật

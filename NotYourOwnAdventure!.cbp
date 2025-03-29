@@ -15,6 +15,12 @@
 					<Add option="-g" />
 					<Add directory="./" />
 				</Compiler>
+				<Linker>
+					<Add option="-lmingw32" />
+					<Add option="-lSDL2main" />
+					<Add option="-lSDL2" />
+					<Add option="-lSDL2_mixer" />
+				</Linker>
 			</Target>
 			<Target title="Release">
 				<Option output="bin/Release/DefenseMyTower!" prefix_auto="1" extension_auto="1" />
@@ -34,6 +40,18 @@
 			<Add option="-Wall" />
 			<Add option="-fexceptions" />
 		</Compiler>
+		<Linker>
+			<Add option="-lmingw32" />
+			<Add option="-lSDL2main" />
+			<Add option="-lSDL2_image" />
+			<Add option="-lSDL2_mixer" />
+			<Add option="-lSDL2_ttf" />
+			<Add option="-lSDL2" />
+		</Linker>
+		<Unit filename="AudioManager.cpp" />
+		<Unit filename="AudioManager.h" />
+		<Unit filename="Bat.cpp" />
+		<Unit filename="Bat.h" />
 		<Unit filename="Boss.cpp" />
 		<Unit filename="Boss.h" />
 		<Unit filename="Coin.cpp" />

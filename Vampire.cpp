@@ -12,7 +12,7 @@ Vampire::Vampire(SDL_Renderer* renderer, Vector2D setPos)
     this->speed = 1.5f;      // 🔥 Tăng tốc độ từ 0.7 → 1.5 (Chạy nhanh hơn)
     this->health = 30;      // 🛡️ Tăng máu từ 5 → 300 (Trâu hơn)
     this->maxHealth = 30;
-    this->attackDamage = 25; // ⚔️ Tăng damage từ 5 → 15 (Mạnh hơn)
+    this->attackDamage = 100; // ⚔️ Tăng damage từ 5 → 15 (Mạnh hơn)
     this->attackRange = 0.8f; // 📏 Giữ khoảng cách tấn công
 
 }
