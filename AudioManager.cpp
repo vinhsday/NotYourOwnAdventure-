@@ -14,12 +14,14 @@ void AudioManager::init() {
         std::cout << "✅ SDL_mixer format initialized.\n";
     }
 
-    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0) {
+    // Đảm bảo mở thiết bị âm thanh trước khi load âm thanh
+    if (Mix_OpenAudio(48000, MIX_DEFAULT_FORMAT, 2, 4096) == -1) {
         std::cout << "❌ SDL_mixer audio error: " << Mix_GetError() << std::endl;
     } else {
         std::cout << "✅ SDL_mixer audio initialized.\n";
     }
 }
+
 
 
 void AudioManager::close() {
@@ -68,4 +70,11 @@ void AudioManager::playSound(const std::string& file) {
 
 void AudioManager::setVolume(int volume) {
     Mix_VolumeMusic(volume);
+}
+
+Mix_Chunk* AudioManager::getSound(const std::string& path) {
+    if (soundEffects.find(path) != soundEffects.end()) {
+        return soundEffects[path];
+    }
+    return nullptr;
 }

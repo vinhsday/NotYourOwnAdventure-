@@ -1,6 +1,7 @@
 #include "Level.h"
 #include <iostream>
 #include "Player.h"
+#include "AudioManager.h"
 
 
 
@@ -321,6 +322,7 @@ void Level::drawPotions(SDL_Renderer* renderer, float camX, float camY) {
 
 
 void Level::checkPotionPickup(Vector2D characterPosition, Player* player) {
+    AudioManager::init();
     for (auto it = potionPositions.begin(); it != potionPositions.end();) {
         Vector2D potionPos = *it;
 
@@ -331,10 +333,14 @@ void Level::checkPotionPickup(Vector2D characterPosition, Player* player) {
             size_t index = std::distance(potionPositions.begin(), it);
             if (potionTextures[index] == potionHealthTexture) {
                 player->increaseHealth(); // Tăng máu
-                std::cout << "🩹 Nhặt Health Potion, tăng máu!\n";
+                AudioManager::playSound("Data/Sound/02_Heal_02.wav");
+                Mix_VolumeChunk(AudioManager::getSound("Data/Sound/02_Heal_02.wav"), 50); // 32 là âm lượng nhỏ
+
+
             } else if (potionTextures[index] == potionManaTexture) {
                 player->levelUp(); // Tăng cấp
-                std::cout << "🌀 Nhặt Mana Potion, tăng cấp!\n";
+                AudioManager::playSound("Data/Sound/16_Atk_buff_04.wav");
+                Mix_VolumeChunk(AudioManager::getSound("Data/Sound/16_Atk_buff_04.wav"), 50); // 32 là âm lượng nhỏ
             }
 
             // Xóa potion khỏi danh sách

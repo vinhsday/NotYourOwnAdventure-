@@ -1,5 +1,6 @@
 #include "Coin.h"
 #include <iostream>
+#include "AudioManager.h"
 Coin::Coin(Vector2D position, SDL_Renderer* renderer) : pos(position) {
     if (!renderer) {
         std::cout << "Error: Renderer is nullptr in Coin constructor!" << std::endl;
@@ -39,7 +40,11 @@ void Coin::draw(SDL_Renderer* renderer, int tileSize, Vector2D cameraPos) {
 }
 
 bool Coin::checkCollision(Vector2D playerPos, float pickupRange) {
+    AudioManager::init();
     if ((pos - playerPos).magnitude() < pickupRange) {
+        AudioManager::playSound("Data/Sound/coin-pickup-98269.mp3");
+        Mix_VolumeChunk(AudioManager::getSound("Data/Sound/coin-pickup-98269.mp3"), 50); // 32 là âm lượng nhỏ
+
         collected = true;
         return true;
     }

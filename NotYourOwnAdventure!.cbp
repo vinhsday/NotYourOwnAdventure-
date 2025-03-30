@@ -40,14 +40,6 @@
 			<Add option="-Wall" />
 			<Add option="-fexceptions" />
 		</Compiler>
-		<Linker>
-			<Add option="-lmingw32" />
-			<Add option="-lSDL2main" />
-			<Add option="-lSDL2_image" />
-			<Add option="-lSDL2_mixer" />
-			<Add option="-lSDL2_ttf" />
-			<Add option="-lSDL2" />
-		</Linker>
 		<Unit filename="AudioManager.cpp" />
 		<Unit filename="AudioManager.h" />
 		<Unit filename="Bat.cpp" />

@@ -1,6 +1,7 @@
 #include "Unit.h"
 #include "Game.h"
 #include <iostream>
+#include "AudioManager.h"
 
 
 const float Unit::size = 0.48f;
@@ -17,6 +18,9 @@ Unit::Unit(SDL_Renderer* renderer, Vector2D setPos)
 }
 
 void Unit::update(float dT, Level& level, std::vector<std::shared_ptr<Unit>>& listUnits, Player& player) {
+    std::cout << "Unit::update - currentFrame: " << currentFrame << std::endl;
+    AudioManager::init();
+
     if (state == UnitState::Death) {
         timerDeath.countDown(dT);
         frameTimer += dT;
@@ -104,6 +108,9 @@ void Unit::update(float dT, Level& level, std::vector<std::shared_ptr<Unit>>& li
 
     // 🗡 Tấn công người chơi
     if (length < attackRange && damageCooldown.timeSIsZero()) {
+        AudioManager::playSound("Data/Sound/small-monster-attack-195712.mp3");
+        Mix_VolumeChunk(AudioManager::getSound("Data/Sound/small-monster-attack-195712.mp3"), 50); // 32 là âm lượng nhỏ
+
         player.removeHealth(attackDamage);
         damageCooldown.resetToMax();
     }
@@ -165,8 +172,12 @@ bool Unit::isDead() { return isdead; }
 Vector2D Unit::getPos() { return pos; }
 
 void Unit::takeDamage(int damage, Game* game) {
+    AudioManager::init();
     health -= damage;
     if (health <= 0) {
+        AudioManager::playSound("Data/Sound/monster-death-grunt-131480.mp3");
+        Mix_VolumeChunk(AudioManager::getSound("Data/Sound/monster-death-grunt-131480.mp3"), 50); // 32 là âm lượng nhỏ
+
         setState(UnitState::Death);
         timerDeath.resetToMax();
         currentFrame = 0; // Đặt lại khung hình
@@ -180,6 +191,9 @@ void Unit::takeDamage(int damage, Game* game) {
 
             int numCoins = rand() % 3 + 1; // Quái rơi từ 1-3 coin
             for (int i = 0; i < numCoins; i++) {
+                AudioManager::playSound("Data/Sound/drop-coin-into-glass-33522.mp3");
+                Mix_VolumeChunk(AudioManager::getSound("Data/Sound/drop-coin-into-glass-33522.mp3"), 50); // 32 là âm lượng nhỏ
+
                 Vector2D coinOffset((rand() % 10 - 5) * 0.1f, (rand() % 10 - 5) * 0.1f);
                 game->coins.push_back(std::make_shared<Coin>(pos + coinOffset, renderer));
             }

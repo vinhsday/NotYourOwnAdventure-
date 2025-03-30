@@ -18,7 +18,8 @@ enum class UnitState {
     Run,
     Attack,
     Hurt,
-    Death
+    Death,
+    Idle
 };
 
 enum Direction { FRONT, BACK, LEFT, RIGHT };
@@ -28,7 +29,7 @@ class Unit
 {
 public:
 	Unit(SDL_Renderer* renderer,Vector2D setPos);
-	virtual void update(float dT, Level& level, std::vector<std::shared_ptr<Unit>>& listUnits, Player& player );
+	virtual void update(float dT, Level& level, std::vector<std::shared_ptr<Unit>>& listUnits, Player& player) ; // Pure virtual
 	virtual void draw(SDL_Renderer* renderer, int tileSize, Vector2D cameraPos);
 	bool checkOverlap(Vector2D posOther, float sizeOther);
 	bool isAlive();

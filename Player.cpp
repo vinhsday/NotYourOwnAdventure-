@@ -1,5 +1,6 @@
 #include "Player.h"
 #include "iostream"
+#include "AudioManager.h"
 
 Player::Player(Game* gamePtr, SDL_Renderer* renderer, Vector2D startPos)
     : game(gamePtr), pos(startPos), lastDirection(0) {
@@ -31,6 +32,7 @@ Player::~Player() {
 
 
 void Player::handleInput(const Uint8* keyState, SDL_Renderer* renderer) {
+    AudioManager::init();
     if (state == PlayerState::Death) return;
 
     if (!isAttacking) {  // Không nhận input di chuyển khi đang tấn công
@@ -42,11 +44,18 @@ void Player::handleInput(const Uint8* keyState, SDL_Renderer* renderer) {
 
         if (up)    direction.y -= 1;
         if (down)  direction.y += 1;
-        if (left)  direction.x -= 1;
-        if (right) direction.x += 1;
-    }
+        if (left)  {
+    direction.x -= 1;
+    AudioManager::playSound("Data/Sound/Retro FootStep Grass 01.wav");
+    Mix_VolumeChunk(AudioManager::getSound("Data/Sound/Retro FootStep Grass 01.wav"), 10); // 32 là âm lượng nhỏ
+}
+if (right) {
+    direction.x += 1;
+    AudioManager::playSound("Data/Sound/Retro FootStep Grass 01.wav");
+    Mix_VolumeChunk(AudioManager::getSound("Data/Sound/Retro FootStep Grass 01.wav"), 10);
+}
 
-
+        }
 
 
 
@@ -54,6 +63,9 @@ void Player::handleInput(const Uint8* keyState, SDL_Renderer* renderer) {
 
 
     if (keyState[SDL_SCANCODE_K] && !isAttacking ) {
+        AudioManager::playSound("Data/Sound/punch-body-hit-joshua-chivers-2-2-00-00.mp3");
+        Mix_VolumeChunk(AudioManager::getSound("Data/Sound/punch-body-hit-joshua-chivers-2-2-00-00.mp3"), 30); // 32 là âm lượng nhỏ
+
     }
     if (!isAttacking) {
     if (direction.x > 0) lastDirection = 1;
@@ -200,13 +212,14 @@ void Player::update(float dT,
     // Làm mượt vị trí nhân vật
     smoothPos = smoothPos + (pos - smoothPos) * 0.2f;
 
-
+AudioManager::init();
 
     if (state == PlayerState::Attack1 || state == PlayerState::Attack1Left) {
     if (damageCooldown.timeSIsZero()) { // Chỉ cho phép gây damage khi cooldown về 0
         for (auto& unit : listUnits) {
             float distance = (unit->getPos() - pos).magnitude();
             if (distance < attackRange) { // Phạm vi đánh
+
                 unit->takeDamage(attackDamage, game);
                 damageCooldown.resetToMax(); // Bắt đầu thời gian hồi cho lần đánh tiếp theo
 
@@ -287,6 +300,7 @@ void Player::draw(SDL_Renderer* renderer, int tileSize, Vector2D cameraPos) { //
 
 
 void Player::removeHealth(int damage) {
+    AudioManager::init();
     if (!damageCooldown.timeSIsZero()) return;  // Cooldown tránh bị đánh liên tục
 
     currentHP -= damage;
@@ -302,6 +316,9 @@ void Player::removeHealth(int damage) {
     frame = 0;  // 🚀 Reset frame Hurt để chắc chắn animation chạy từ đầu
 
      if (currentHP <= 0) {
+        AudioManager::playSound("Data/Sound/male-death-sound-128357.mp3");
+        Mix_VolumeChunk(AudioManager::getSound("Data/Sound/male-death-sound-128357.mp3"), 100); // 32 là âm lượng nhỏ
+
         currentHP = 0;
         state = PlayerState::Death;
         frame = 0;
