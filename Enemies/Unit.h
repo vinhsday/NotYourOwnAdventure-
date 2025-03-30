@@ -2,12 +2,12 @@
 #include <memory>
 #include <vector>
 #include "SDL.h"
-#include "Vector2D.h"
-#include "Level.h"
-#include "TextureLoader.h"
-#include "Timer.h"
-#include "Player.h"
-#include "Level.h"
+#include "../Support/Vector2D.h"
+#include "../Level.h"
+#include "../Support/TextureLoader.h"
+#include "../Support/Timer.h"
+#include "../Player.h"
+#include "../Level.h"
 class Game;
 
 class Player;
@@ -37,7 +37,7 @@ public:
 	void takeDamage(int damage, Game* game);
 	bool isDead();
 	void setState(UnitState state_);
-	int getFrameCount();
+	virtual int getFrameCount();
 	int getColumnCount();
 	SDL_Texture* getTextureForState();
 
@@ -48,6 +48,8 @@ public:
 protected:
     	Vector2D pos;
         UnitState state = UnitState::Run; // Mặc định là chạy
+        bool isdead = false;
+        Timer timerJustHurt = Timer(0.2f);
 
 private:
 	static const float size;
@@ -59,18 +61,14 @@ private:
 
 
 
-    Timer timerJustHurt = Timer(0.3f);
 
     Timer timerDeath = Timer(0.7f);
-    bool isdead = false;
 
-    int frame = 0;
+
     int frameCount = 10;
-    float frameTime = 0.1f;
+    float frameTime = 1.0f / 15.0f;
     float frameTimer = 0.0f;
 
-    int frameWidth = 640 / 10;  // 80 px
-    int frameHeight = 256 / 4; // 64 px
 
     Timer damageCooldown = Timer(1.0f); // 1 giây giữa mỗi lần gây sát thương
 
@@ -86,6 +84,9 @@ protected:
     SDL_Texture* textureAttack = nullptr;
     SDL_Texture* textureHurt = nullptr;
     SDL_Texture* textureDeath = nullptr;
+    int frameWidth = 640 / 10;  // 80 px
+    int frameHeight = 256 / 4; // 64 px
+    int frame = 0;
 
     float speed;
     float health, maxHealth;

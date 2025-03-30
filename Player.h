@@ -1,14 +1,12 @@
 #pragma once
 #include "SDL.h"
-#include "Vector2D.h"
-#include "TextureLoader.h"
-#include "Projectile.h"
+#include "Support/Vector2D.h"
+#include "Support/TextureLoader.h"
 #include "Game.h"
 #include <vector>
 #include "Level.h"
-#include "Timer.h"
+#include "Support/AudioManager.h"
 
-class Projectile;
 class Unit;
 class Game;  // Khai báo trước để tránh lỗi
 class Level;
@@ -61,8 +59,9 @@ public:
 
     int frame = 0;
     int frameCount = 8; // 8 frame mỗi animation
-    float frameTime = 0.07f;
+    float frameTime = 1.0f / 15.0f;
     float frameTimer = 0.0f;
+    int level = 1;
 
     void reset();
 
@@ -85,7 +84,7 @@ private:
 
     Timer shootCooldown = Timer(0.3f); // Khoảng cách giữa các lần bắn
 
-    void shoot(SDL_Renderer* renderer);
+
 
 
 
@@ -113,7 +112,7 @@ private:
     int currentHP = 100;
     int maxMP = 50;
     int coin = 0;
-    int level = 1;
+
 
     Timer damageCooldown = Timer(1.0f); // 1 giây giữa mỗi lần nhận damage
 

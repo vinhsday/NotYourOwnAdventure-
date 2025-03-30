@@ -1,14 +1,23 @@
 #include "HUD.h"
 #include "SDL_ttf.h"
 #include <iostream>
+#include "Support/AudioManager.h"
+#include "Game.h"
 
 HUD::HUD(SDL_Renderer* renderer, Player* player) : player(player) {
-    playerAvatar = TextureLoader::loadTexture(renderer, "Icon18.png");
+    playerAvatar = TextureLoader::loadTexture(renderer, "avatar.png");
     if (!playerAvatar) {
         std::cout << "⚠️ HUD: Failed to load player avatar!" << std::endl;
     }
 
+    // Khởi tạo âm lượng ban đầu
 
+    volumeSlider.x = volumeBar.x + (volume * volumeBar.w / 128); // Đặt vị trí slider theo volume mặc định
+
+    pauseTexture = TextureLoader::loadTexture(renderer, "pause_one.png");
+    pauseHoverTexture = TextureLoader::loadTexture(renderer, "pause_one_hover.png");
+    quitTexture = TextureLoader::loadTexture(renderer, "back_button.png");
+    quitHoverTexture = TextureLoader::loadTexture(renderer, "back03.png");
 }
 
 void HUD::addSkill(SDL_Texture* icon, float maxCooldown) {
@@ -21,9 +30,22 @@ void HUD::useSkill(int index) {
     }
 }
 
-void HUD::update(float dT) {
+void HUD::update(float dT, const std::vector<std::shared_ptr<Unit>>& units) {
     for (auto& skill : skills) {
         skill.update(dT);
+    }
+
+    // Cập nhật thời gian sống sót
+    if (!player->isDead) {
+        survivalTime += dT;
+    }
+
+    // Đếm số kẻ thù còn lại
+    enemyCount = 0;
+    for (const auto& unit : units) {
+        if (unit && unit->isAlive()) {
+            enemyCount++;
+        }
     }
 }
 
@@ -33,57 +55,99 @@ void HUD::draw(SDL_Renderer* renderer) {
     SDL_SetRenderDrawColor(renderer, 50, 50, 50, 200);
     SDL_RenderFillRect(renderer, &hudBackground);
 
-    // 🩸 Vẽ thanh máu & mana
-    int barWidth = 200;
-    int barHeight = 10;
-    SDL_Rect healthBarBg = { 120, 20, barWidth, barHeight };
-    SDL_Rect healthBar = { 120, 20, (barWidth * player->getCurrentHP()) / player->getMaxHP(), barHeight };
-    SDL_Rect manaBarBg = { 120, 40, barWidth, barHeight };
-    SDL_Rect manaBar = { 120, 40, (barWidth * player->getCurrentMP()) / player->getMaxMP(), barHeight };
-
-    SDL_SetRenderDrawColor(renderer, 100, 100, 100, 255);
-    SDL_RenderFillRect(renderer, &healthBarBg);
-    SDL_RenderFillRect(renderer, &manaBarBg);
-    SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
-    SDL_RenderFillRect(renderer, &healthBar);
-    SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255);
-    SDL_RenderFillRect(renderer, &manaBar);
-
-    // 🖼 Hiển thị hình nhân vật
     SDL_Rect avatarRect = { 20, 20, 80, 80 };
     SDL_RenderCopy(renderer, playerAvatar, NULL, &avatarRect);
 
-    // 💰 Hiển thị tiền (cần font chữ SDL_ttf)
+    drawHealthBar(renderer, 120, 20, 200, 10);
+    drawManaBar(renderer, 120, 40, 200, 10);
+
+    renderText(renderer, "Coins: " + std::to_string(player->getCoins()), 340, 30, 16, {255, 255, 0});
+    renderText(renderer, "Enemies: " + std::to_string(enemyCount), 500, 30, 16, {255, 255, 255});
+    renderText(renderer, "Level: " + std::to_string(player->level), 780, 30, 16, {0, 255, 0}); // Màu xanh lá cây
+    int minutes = static_cast<int>(survivalTime / 60);
+    int seconds = static_cast<int>(survivalTime) % 60;
+    std::string timeStr = "Time: " + std::to_string(minutes) + ":" + (seconds < 10 ? "0" : "") + std::to_string(seconds);
+    renderText(renderer, timeStr, 650, 30, 16, {255, 255, 255});
+
+    // Vẽ thanh trượt âm lượng trong khung HUD
+    renderText(renderer, "Vol", volumeBar.x - 40, volumeBar.y - 5, 16, {255, 255, 255}); // Nhãn "Vol" ngắn gọn
+    SDL_SetRenderDrawColor(renderer, 100, 100, 100, 255); // Nền thanh âm lượng
+    SDL_RenderFillRect(renderer, &volumeBar);
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255); // Viền
+    SDL_RenderDrawRect(renderer, &volumeBar);
+    SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255); // Slider màu xanh
+    SDL_RenderFillRect(renderer, &volumeSlider);
 
 
-    // 🎯 Hiển thị skill ở góc dưới trái màn hình
+    // Vẽ nút Pause và Quit
+    int mouseX, mouseY;
+    SDL_GetMouseState(&mouseX, &mouseY);
+    bool isHoverPause = (mouseX >= pauseButton.x && mouseX <= pauseButton.x + pauseButton.w &&
+                         mouseY >= pauseButton.y && mouseY <= pauseButton.y + pauseButton.h);
+    bool isHoverQuit = (mouseX >= quitButton.x && mouseX <= quitButton.x + quitButton.w &&
+                        mouseY >= quitButton.y && mouseY <= quitButton.y + quitButton.h);
+
+    SDL_RenderCopy(renderer, isHoverPause ? pauseHoverTexture : pauseTexture, NULL, &pauseButton);
+    SDL_RenderCopy(renderer, isHoverQuit ? quitHoverTexture : quitTexture, NULL, &quitButton);
     int x = 50, y = 500;
     int iconSize = 50;
-
     for (auto& skill : skills) {
         SDL_Rect dstRect = {x, y, iconSize, iconSize};
-
-        // Kiểm tra cooldown
         if (!skill.ready()) {
-            SDL_SetTextureColorMod(skill.icon, 100, 100, 100); // Làm icon mờ đi
+            SDL_SetTextureColorMod(skill.icon, 100, 100, 100);
         } else {
             SDL_SetTextureColorMod(skill.icon, 255, 255, 255);
         }
         SDL_RenderCopy(renderer, skill.icon, NULL, &dstRect);
 
-        // Vẽ thanh cooldown
         if (!skill.ready()) {
             float ratio = skill.cooldown / skill.maxCooldown;
             SDL_Rect cooldownBar = {x, y + iconSize + 5, (int)(iconSize * (1 - ratio)), 5};
             SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
             SDL_RenderFillRect(renderer, &cooldownBar);
         }
-
-        x += iconSize + 10; // Dịch sang phải để hiển thị skill tiếp theo
+        x += iconSize + 10;
     }
+}
+void HUD::drawHealthBar(SDL_Renderer* renderer, int x, int y, int width, int height) {
+    SDL_Rect bg = { x, y, width, height };
+    SDL_Rect bar = { x, y, (width * player->getCurrentHP()) / player->getMaxHP(), height };
 
-    // Hiển thị coin
-     // Khởi tạo SDL_ttf
+    // Viền
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    SDL_RenderDrawRect(renderer, &bg);
+
+    // Nền
+    SDL_SetRenderDrawColor(renderer, 100, 100, 100, 255);
+    SDL_RenderFillRect(renderer, &bg);
+
+    // Thanh máu (nhấp nháy nếu dưới 25%)
+    if (player->getCurrentHP() < player->getMaxHP() * 0.25f && SDL_GetTicks() % 500 < 250) {
+        SDL_SetRenderDrawColor(renderer, 255, 100, 100, 255); // Nhấp nháy đỏ nhạt
+    } else {
+        SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+    }
+    SDL_RenderFillRect(renderer, &bar);
+}
+
+void HUD::drawManaBar(SDL_Renderer* renderer, int x, int y, int width, int height) {
+    SDL_Rect bg = { x, y, width, height };
+    SDL_Rect bar = { x, y, (width * player->getCurrentMP()) / player->getMaxMP(), height };
+
+    // Viền
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    SDL_RenderDrawRect(renderer, &bg);
+
+    // Nền
+    SDL_SetRenderDrawColor(renderer, 100, 100, 100, 255);
+    SDL_RenderFillRect(renderer, &bg);
+
+    // Thanh mana
+    SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255);
+    SDL_RenderFillRect(renderer, &bar);
+}
+
+void HUD::renderText(SDL_Renderer* renderer, const std::string& text, int x, int y, int fontSize, SDL_Color color) {
     if (TTF_WasInit() == 0) {
         if (TTF_Init() == -1) {
             std::cout << "SDL_ttf Init Error: " << TTF_GetError() << "\n";
@@ -91,20 +155,80 @@ void HUD::draw(SDL_Renderer* renderer) {
         }
     }
 
-    // Mở font
-    TTF_Font* font = TTF_OpenFont("Data/Font/ThaleahFat.ttf", 16);
+    TTF_Font* font = TTF_OpenFont("Data/Font/ThaleahFat.ttf", fontSize);
     if (!font) {
         std::cout << "Failed to load font: " << TTF_GetError() << "\n";
         return;
     }
-    SDL_Color color = {255, 255, 0};  // Màu vàng cho coin
-    std::string coinText = "Coins: " + std::to_string(player->getCoins());
-    SDL_Surface* coinSurface = TTF_RenderText_Solid(font, coinText.c_str(), color);
-    SDL_Texture* coinTexture = SDL_CreateTextureFromSurface(renderer, coinSurface);
-    SDL_Rect coinRect = {340, 30, coinSurface->w, coinSurface->h};
-    SDL_RenderCopy(renderer, coinTexture, NULL, &coinRect);
-    SDL_FreeSurface(coinSurface);
-    SDL_DestroyTexture(coinTexture);
-    TTF_CloseFont(font);
 
+    SDL_Surface* surface = TTF_RenderText_Solid(font, text.c_str(), color);
+    if (!surface) {
+        std::cout << "Text Surface Error: " << TTF_GetError() << "\n";
+        TTF_CloseFont(font);
+        return;
+    }
+
+    SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
+    if (!texture) {
+        std::cout << "Text Texture Error: " << SDL_GetError() << "\n";
+        SDL_FreeSurface(surface);
+        TTF_CloseFont(font);
+        return;
+    }
+
+    SDL_Rect rect = { x, y, surface->w, surface->h };
+    SDL_RenderCopy(renderer, texture, NULL, &rect);
+
+    SDL_FreeSurface(surface);
+    SDL_DestroyTexture(texture);
+    TTF_CloseFont(font);
+}
+
+bool HUD::handleInput(SDL_Event& event, Game* game) {
+    switch (event.type) {
+        case SDL_MOUSEBUTTONDOWN:
+            if (event.button.button == SDL_BUTTON_LEFT) {
+                int mouseX = event.button.x;
+                int mouseY = event.button.y;
+                if (mouseX >= volumeSlider.x && mouseX <= volumeSlider.x + volumeSlider.w &&
+                    mouseY >= volumeSlider.y && mouseY <= volumeSlider.y + volumeSlider.h) {
+                    draggingVolume = true;
+                }
+            // Xử lý nút Pause
+                else if (mouseX >= pauseButton.x && mouseX <= pauseButton.x + pauseButton.w &&
+                         mouseY >= pauseButton.y && mouseY <= pauseButton.y + pauseButton.h) {
+                    AudioManager::playSound("Data/Sound/Wood Block1.mp3");
+                    game->setState(GameState::Paused); // Chuyển sang trạng thái Paused
+                    return true;
+                }
+                // Xử lý nút Quit
+                else if (mouseX >= quitButton.x && mouseX <= quitButton.x + quitButton.w &&
+                         mouseY >= quitButton.y && mouseY <= quitButton.y + quitButton.h) {
+                    AudioManager::playSound("Data/Sound/Wood Block1.mp3");
+                    game->setState(GameState::Quit); // Chuyển sang trạng thái Quit
+                    return true;
+                }
+            }
+            break;
+
+        case SDL_MOUSEBUTTONUP:
+            if (event.button.button == SDL_BUTTON_LEFT) {
+                draggingVolume = false;
+            }
+            break;
+
+        case SDL_MOUSEMOTION:
+            if (draggingVolume) {
+                int mouseX = event.motion.x;
+                // Giới hạn slider trong thanh volumeBar
+                volumeSlider.x = std::max(volumeBar.x, std::min(mouseX - volumeSlider.w / 2, volumeBar.x + volumeBar.w - volumeSlider.w));
+                // Tính giá trị volume từ vị trí slider (0-128)
+                volume = ((volumeSlider.x - volumeBar.x) * 128) / volumeBar.w;
+                Mix_VolumeMusic(volume); // Điều chỉnh âm lượng nhạc
+                // Điều chỉnh âm lượng hiệu ứng âm thanh nếu cần
+                // Ví dụ: Mix_VolumeChunk(AudioManager::getSound("Data/Sound/Wood Block1.mp3"), volume);
+            }
+            break;
+    }
+    return draggingVolume; // Trả về true nếu đang kéo slider
 }

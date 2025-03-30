@@ -3,14 +3,13 @@
 #include <chrono>
 #include <memory>
 #include "SDL.h"
-#include "Unit.h"
-#include "Projectile.h"
+#include "Enemies/Unit.h"
 #include "Level.h"
-#include "Timer.h"
+#include "Support/Timer.h"
 #include "Player.h"
 #include "HUD.h"
-#include "FireEffect.h"
-#include "IceEffect.h"
+#include "Skills/FireEffect.h"
+#include "Skills/IceEffect.h"
 
 const int windowWidth = 960;
 const int windowHeight = 576;
@@ -22,94 +21,68 @@ class Player;
 class Projectile;
 class Unit;
 
+enum class GameState { Menu, Gameplay, GameOver, Quit, Victory, Paused };
 
-class Game
-{
-
-
+class Game {
 public:
-	Game(SDL_Window* window, SDL_Renderer* renderer, int windowWidth, int windowHeight);
-	~Game();
-public:
-    void addProjectiles(const Projectile& projectile) {
-        listProjectiles.push_back(projectile);
-    }
-    std::vector<Projectile> listProjectiles;
+    Game(SDL_Window* window, SDL_Renderer* renderer, int windowWidth, int windowHeight);
+    ~Game();
+    void run(); // Thêm hàm chạy game
 
     std::vector<std::shared_ptr<Coin>> coins;
 
-    SDL_Renderer* getRenderer() const { return renderer_; } // Hàm lấy renderer
+    SDL_Renderer* getRenderer() const { return renderer_; }
 
     bool bossSpawned = false;
     void triggerBossSpawn();
     void spawnBoss();
     bool allEnemiesDead();
 
-    void addFireEffect(const FireEffect& effect) {
-        listFireEffects.push_back(effect);
-    }
-
-    void addIceEffect(const IceEffect& effect) {
-        listIceEffects.push_back(effect);
-    }
+    void addFireEffect(const FireEffect& effect) { listFireEffects.push_back(effect); }
+    void addIceEffect(const IceEffect& effect) { listIceEffects.push_back(effect); }
 
     bool showMenu(SDL_Renderer* renderer);
-
     bool showAboutScreen(SDL_Renderer* renderer);
-
     void renderText(SDL_Renderer* renderer, const std::string& text, int x, int y, int fontSize);
-
     void showGameOverMenu(SDL_Renderer* renderer);
-
+    void showVictoryMenu(SDL_Renderer* renderer); // Thêm hàm hiển thị khung Victory
     void restartGame();
+    void showPauseMenu(SDL_Renderer* renderer);
 
-
+    GameState getState() const { return gameState; }
+    void setState(GameState state) { gameState = state; }
 
 private:
-	void processEvents(SDL_Renderer* renderer, bool& running);
-	void update(SDL_Renderer* renderer, float dT, Level& level);
-	void updateUnits(float dT);
-	void updateProjectiles(float dT);
-	void updateSpawnUnitsIfRequired(SDL_Renderer* renderer, float dT);
-	void draw(SDL_Renderer* renderer);
-	void addUnit(SDL_Renderer* renderer, Vector2D posMouse);
+    void processEvents(SDL_Renderer* renderer, bool& running);
+    void update(SDL_Renderer* renderer, float dT, Level& level);
+    void updateUnits(float dT);
+    void updateSpawnUnitsIfRequired(SDL_Renderer* renderer, float dT);
+    void draw(SDL_Renderer* renderer);
+    void addUnit(SDL_Renderer* renderer, Vector2D posMouse);
     void updateFireEffects(float dT);
-	int mouseDownStatus = 0;
-
-	const int tileSize = 64;
-	Level level;
-
-	std::vector<std::shared_ptr<Unit>> listUnits;
-
-    Player* player;
-
-	Timer spawnTimer, roundTimer;
-	int spawnUnitCount = 0;
-
-	void updateCamera();
-
-
-
-
-    Vector2D cameraPos; // 📸 Camera position
-    const float cameraSpeed = 5.0f; // 📸 Tốc độ di chuyển camera
-
-    HUD* hud;
-
-    SDL_Renderer* renderer_;
-
-    std::vector<FireEffect> listFireEffects; // Danh sách hiệu ứng lửa
-
-    std::vector<IceEffect> listIceEffects; // Danh sách hiệu ứng băng
     void updateIceEffects(float dT);
 
+    const int tileSize = 64;
+    Level level;
+
+    std::vector<std::shared_ptr<Unit>> listUnits;
+    Player* player;
+    Timer spawnTimer, roundTimer;
+    int spawnUnitCount = 0;
+
+    void updateCamera();
+
+    Vector2D cameraPos;
+    const float cameraSpeed = 5.0f;
+    HUD* hud;
+    SDL_Renderer* renderer_;
+
+    std::vector<FireEffect> listFireEffects;
+    std::vector<IceEffect> listIceEffects;
+
     bool gameOver = false;
+    int windowWidth;
+    int windowHeight;
 
-
-
-    bool isShaking = false;         // Trạng thái rung
-    float shakeTimer = 0.0f;        // Thời gian còn lại của hiệu ứng rung
-    float shakeDuration = 0.3f;     // Tổng thời gian rung (0.3 giây)
-    float shakeMagnitude = 0.5f;    // Độ lớn của rung (0.5 đơn vị)
-    int shakeStep = 0;              // Bước hiện tại trong hiệu ứng rung
+    GameState gameState = GameState::Menu;
 };

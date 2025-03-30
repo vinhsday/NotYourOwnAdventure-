@@ -1,9 +1,10 @@
 #include "Boss.h"
 #include <iostream>
+#include "../Support/AudioManager.h"
 
 Boss::Boss(SDL_Renderer* renderer, Vector2D spawnPos)
     : Unit(renderer, spawnPos), renderer_(renderer) {
-    health = 5000;
+    health = 5;
     maxHealth = 5000;
     attackDamage = 10;
     speed = 0.3f;
@@ -17,6 +18,11 @@ Boss::Boss(SDL_Renderer* renderer, Vector2D spawnPos)
 
     if (!spawnTexture) {
         std::cout << "Error: Failed to load Boss_spawn.png" << std::endl;
+    }
+
+    if (!textureRun || !textureAttack || !textureHurt || !textureDeath || !idleTexture) {
+        std::cerr << "Error: One or more boss textures failed to load!" << std::endl;
+        throw std::runtime_error("Boss texture loading failed");
     }
 
     loadAnimations(spawnTexture, spawnFrames, 11);
@@ -53,33 +59,29 @@ void Boss::loadAnimations(SDL_Texture* spriteSheet, std::vector<SDL_Rect>& frame
 }
 
 void Boss::update(float dT, Level& level, std::vector<std::shared_ptr<Unit>>& listUnits, Player& player) {
-    std::cout << "Boss::update - isSpawning: " << isSpawning << ", state: " << static_cast<int>(state)
-              << ", animationTimer: " << animationTimer << ", spawnTimer: " << spawnTimer
-              << ", summonTimer: " << summonTimer << ", currentFrame: " << currentFrame << std::endl;
-
     animationTimer += dT;
     summonTimer += dT;
 
     if (isSpawning) {
         spawnTimer -= dT;
-        if (animationTimer >= frameTimeBoss) {
+        if (animationTimer >= frameTimeBoss && currentFrame < spawnFrames.size() - 1) {
             animationTimer = 0.0f;
-            if (currentFrame < 10) {
-                currentFrame++;
-                std::cout << "Update - Spawn Frame: " << currentFrame << std::endl;
-            }
+            currentFrame++;
         }
         if (spawnTimer <= 0.0f) {
             isSpawning = false;
             state = UnitState::Run;
             currentFrame = 0;
-            summonTimer = 0.0f; // Reset để không vào Idle ngay
-            std::cout << "Spawn Ended, Switching to Run" << std::endl;
+            summonTimer = 0.0f;
         }
         return;
     }
 
     if (summonTimer >= 5.0f && state != UnitState::Death) {
+        AudioManager::init();
+        AudioManager::playSound("Data/Sound/monster-roar-6985.mp3");
+        Mix_VolumeChunk(AudioManager::getSound("Data/Sound/monster-roar-6985.mp3"), 50);
+
         isIdle = true;
         isSummoning = true;
         summonTimer = 0.0f;
@@ -87,7 +89,6 @@ void Boss::update(float dT, Level& level, std::vector<std::shared_ptr<Unit>>& li
         idleTimer = 0.0f;
         currentFrame = 0;
         state = UnitState::Idle;
-        std::cout << "Switching to Idle for summoning" << std::endl;
         return;
     }
 
@@ -96,25 +97,22 @@ void Boss::update(float dT, Level& level, std::vector<std::shared_ptr<Unit>>& li
         if (animationTimer >= frameTimeBoss) {
             animationTimer = 0.0f;
             currentFrame = (currentFrame + 1) % idleFrames.size();
-            std::cout << "Idle Frame: " << currentFrame << std::endl;
         }
         if (idleTimer >= idleDuration) {
             isIdle = false;
             isSummoning = false;
             state = UnitState::Run;
             currentFrame = 0;
-            std::cout << "Idle Ended, Switching to Run" << std::endl;
         }
         return;
     }
 
     if (state == UnitState::Death) {
-        if (animationTimer >= frameTimeBoss) {
+        if (animationTimer >= frameTimeBoss && currentFrame < deathFrames.size() - 1) {
             animationTimer = 0.0f;
-            if (currentFrame < deathFrames.size() - 1) {
-                currentFrame++;
-                std::cout << "Death Frame: " << currentFrame << std::endl;
-            }
+            currentFrame++;
+        } else if (currentFrame >= deathFrames.size() - 1) {
+            isdead = true;
         }
         return;
     }
@@ -122,29 +120,23 @@ void Boss::update(float dT, Level& level, std::vector<std::shared_ptr<Unit>>& li
     Vector2D playerPos = player.getPos();
     Vector2D dirVector = playerPos - pos;
     float distance = dirVector.magnitude();
-    std::cout << "Distance to player: " << distance << ", Boss pos: (" << pos.x << ", " << pos.y
-              << "), Player pos: (" << playerPos.x << ", " << playerPos.y << ")" << std::endl;
 
     if (isAttacking) {
         attackTimer += dT;
-        if (attackTimer >= frameTimeBoss) {
+        if (attackTimer >= frameTimeBoss && attackFrame < attackFrames.size() - 1) {
             attackTimer = 0.0f;
             attackFrame++;
-            if (attackFrame >= attackFrames.size()) {
-                isAttacking = false;
-                attackFrame = 0;
-                if (distance <= 1.5f) {
-                    player.removeHealth(attackDamage);
-                    std::cout << "Player hit, damage: " << attackDamage << std::endl;
-                }
-                state = UnitState::Run;
-                std::cout << "Attack Ended, Switching to Run" << std::endl;
+        } else if (attackFrame >= attackFrames.size() - 1) {
+            isAttacking = false;
+            attackFrame = 0;
+            if (distance <= 1.5f && !player.isDead) {
+                player.removeHealth(attackDamage);
             }
+            state = UnitState::Run;
         }
     } else if (health <= 0) {
         state = UnitState::Death;
         currentFrame = 0;
-        std::cout << "Boss Died" << std::endl;
     } else if (distance > 1.5f) {
         dirVector.normalize();
         pos += dirVector * speed * dT;
@@ -152,80 +144,91 @@ void Boss::update(float dT, Level& level, std::vector<std::shared_ptr<Unit>>& li
         if (animationTimer >= frameTimeBoss) {
             animationTimer = 0.0f;
             currentFrame = (currentFrame + 1) % runFrames.size();
-            std::cout << "Run Frame: " << currentFrame << std::endl;
         }
-        std::cout << "Boss moving to: (" << pos.x << ", " << pos.y << ")" << std::endl;
     } else {
         isAttacking = true;
         attackTimer = 0.0f;
         attackFrame = 0;
         state = UnitState::Attack;
-        std::cout << "Switching to Attack" << std::endl;
     }
 }
-
 void Boss::draw(SDL_Renderer* renderer, int tileSize, Vector2D cameraPos) {
+    if (!renderer || isDead()) return;
+
     SDL_Texture* currentTexture = nullptr;
     SDL_Rect currentFrameRect;
 
     if (isSpawning) {
         currentTexture = spawnTexture;
-        currentFrameRect = {0, currentFrame * 120, 120, 120};
+        currentFrameRect = spawnFrames[currentFrame];
     } else {
         switch (state) {
-            case UnitState::Run:
-                currentTexture = textureRun;
-                currentFrameRect = runFrames[currentFrame];
-                break;
-            case UnitState::Attack:
-                currentTexture = textureAttack;
-                currentFrameRect = attackFrames[attackFrame];
-                break;
-            case UnitState::Hurt:
-                currentTexture = textureHurt;
-                currentFrameRect = hurtFrames[currentFrame];
-                break;
-            case UnitState::Death:
-                currentTexture = textureDeath;
-                currentFrameRect = deathFrames[currentFrame];
-                break;
-            case UnitState::Idle:
-            default:
-                currentTexture = idleTexture;
-                currentFrameRect = idleFrames[currentFrame];
-                break;
+            case UnitState::Run: currentTexture = textureRun; currentFrameRect = runFrames[currentFrame]; break;
+            case UnitState::Attack: currentTexture = textureAttack; currentFrameRect = attackFrames[attackFrame]; break;
+            case UnitState::Hurt: currentTexture = textureHurt; currentFrameRect = hurtFrames[currentFrame]; break;
+            case UnitState::Death: currentTexture = textureDeath; currentFrameRect = deathFrames[currentFrame]; break;
+            case UnitState::Idle: default: currentTexture = idleTexture; currentFrameRect = idleFrames[currentFrame]; break;
         }
     }
 
     if (currentTexture) {
-        std::cout << "Draw - Rendering Frame: " << currentFrame << " (x: " << currentFrameRect.x
-                  << ", y: " << currentFrameRect.y << ", w: " << currentFrameRect.w
-                  << ", h: " << currentFrameRect.h << ") - Pos: (" << pos.x << ", " << pos.y << ")" << std::endl;
-        SDL_Rect destRect = {
-            (int)((pos.x - cameraPos.x) * tileSize),
-            (int)((pos.y - cameraPos.y) * tileSize),
-            currentFrameRect.w,
-            currentFrameRect.h
-        };
-SDL_RenderCopy(renderer, currentTexture, &currentFrameRect, &destRect);    } else {
-        std::cout << "Draw - Error: No valid texture!" << std::endl;
+        // Căn giữa boss tại pos
+        int xPos = std::round((pos.x - cameraPos.x) * tileSize) - (frameWidth / 2);
+        int yPos = std::round((pos.y - cameraPos.y) * tileSize) - (frameHeight / 2);
+        SDL_Rect destRect = {xPos, yPos, frameWidth * 2, frameHeight * 2}; // 240x240
+        SDL_RenderCopy(renderer, currentTexture, &currentFrameRect, &destRect);
+
+        // Debug vị trí vẽ
+        std::cout << "Boss drawn at screen pos: (" << xPos << ", " << yPos << "), Logic pos: ("
+                  << pos.x << ", " << pos.y << "), Camera: (" << cameraPos.x << ", " << cameraPos.y << ")\n";
+    } else {
+        std::cout << "Error: No valid texture for Boss in state " << static_cast<int>(state) << std::endl;
+    }
+
+    if (isAlive()) {
+        drawHealthBar(renderer, tileSize, cameraPos);
     }
 }
 
 void Boss::summonMinions(SDL_Renderer* renderer, Level& level, std::vector<std::shared_ptr<Unit>>& listUnits) {
-    std::cout << "Boss::summonMinions - isSummoning: " << isSummoning << std::endl;
-    if (!isSummoning) return;
+    if (!isSummoning || !renderer) return;
 
     int numMinions = 3;
-    int summonRadius = 150;
+    float summonRadius = 2.0f; // 2 đơn vị lưới logic
 
     for (int i = 0; i < numMinions; ++i) {
-        int offsetX = (rand() % (2 * summonRadius)) - summonRadius;
-        int offsetY = (rand() % (2 * summonRadius)) - summonRadius;
-        Vector2D summonPos = pos + Vector2D((float)offsetX, (float)offsetY);
+        float offsetX = (rand() % 200) / 100.0f - 1.0f; // -1.0 đến 1.0
+        float offsetY = (rand() % 200) / 100.0f - 1.0f; // -1.0 đến 1.0
+        Vector2D summonPos = pos + Vector2D(offsetX * summonRadius, offsetY * summonRadius);
+        summonPos.x = std::max(0.5f, std::min(summonPos.x, (float)level.GetX() - 0.5f));
+        summonPos.y = std::max(0.5f, std::min(summonPos.y, (float)level.GetY() - 0.5f));
         listUnits.push_back(std::make_shared<Bat>(renderer, summonPos));
         std::cout << "Summoned Bat at: (" << summonPos.x << ", " << summonPos.y << ")" << std::endl;
     }
-
     isSummoning = false;
 }
+
+void Boss::drawHealthBar(SDL_Renderer* renderer, int tileSize, Vector2D cameraPos) {
+    const int barWidth = 200;  // Chiều rộng thanh máu (pixel)
+    const int barHeight = 5;  // Chiều cao thanh máu
+
+    // Tính vị trí thanh máu dựa trên vị trí boss
+    int barX = ((int)(pos.x * tileSize) - barWidth / 2 - (int)(cameraPos.x * tileSize)) + 60;
+    int barY = (int)(pos.y * tileSize) - frameHeight / 2 - (int)(cameraPos.y * tileSize) ;
+
+    SDL_Rect bg = { barX, barY, barWidth, barHeight };
+    SDL_Rect bar = { barX, barY, (int)(barWidth * health / maxHealth), barHeight };
+
+    // Vẽ viền
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    SDL_RenderDrawRect(renderer, &bg);
+
+    // Vẽ nền
+    SDL_SetRenderDrawColor(renderer, 100, 100, 100, 255);
+    SDL_RenderFillRect(renderer, &bg);
+
+    // Vẽ thanh máu
+    SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+    SDL_RenderFillRect(renderer, &bar);
+}
+

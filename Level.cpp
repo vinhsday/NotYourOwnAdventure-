@@ -1,8 +1,7 @@
 #include "Level.h"
 #include <iostream>
 #include "Player.h"
-#include "AudioManager.h"
-
+#include "Support/AudioManager.h"
 
 
 Level::Level(SDL_Renderer* renderer, int setTileCountX, int setTileCountY)
@@ -66,15 +65,30 @@ void Level::generateDecorPositions() {
 
 
 void Level::draw(SDL_Renderer* renderer, int tileSize, float camX, float camY) {
+    if (!renderer) {
+        std::cout << "Error: Renderer is null in Level::draw" << std::endl;
+        return;
+    }
+
     if (std::chrono::steady_clock::now() - lastPotionSpawnTime >= std::chrono::seconds(15)) {
         spawnPotions();
         lastPotionSpawnTime = std::chrono::steady_clock::now();
     }
 
-    for (int y = 0; y < tileCountY; y++) {
-        for (int x = 0; x < tileCountX; x++) {
-            SDL_Rect rect = { x * tileSize - camX, y * tileSize - camY, tileSize, tileSize };
-            SDL_RenderCopy(renderer, textureGrass, NULL, &rect);
+    if (!textureGrass) {
+        std::cout << "Error: textureGrass is null!" << std::endl;
+        SDL_SetRenderDrawColor(renderer, 34, 139, 34, 255); // Màu xanh lá cây làm nền tạm thời
+        SDL_RenderFillRect(renderer, nullptr);
+    } else {
+        for (int y = 0; y < tileCountY; y++) {
+            for (int x = 0; x < tileCountX; x++) {
+                // Sử dụng std::round để căn chỉnh chính xác
+                int xPos = std::round(x * tileSize - camX);
+                int yPos = std::round(y * tileSize - camY);
+                // Tăng kích thước tile thêm 1 pixel để che khe hở
+                SDL_Rect rect = {xPos, yPos, tileSize + 1, tileSize + 1};
+                SDL_RenderCopy(renderer, textureGrass, NULL, &rect);
+            }
         }
     }
 

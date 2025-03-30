@@ -1,76 +1,62 @@
 #include "Game.h"
 #include <iostream>
 #include "HUD.h"
-#include "Orc.h"
-#include "Vampire.h"
-#include "Boss.h"
+#include "Enemies/Orc.h"
+#include "Enemies/Vampire.h"
+#include "Enemies/Boss.h"
 #include <SDL_ttf.h>
-#include "AudioManager.h"
+#include "Support/AudioManager.h"
+#include "algorithm"
 
 
 
 Game::Game(SDL_Window* window, SDL_Renderer* renderer, int windowWidth, int windowHeight)
-    : level(renderer, 30, 20), // Tăng kích thước bản đồ: 30x20 tile
-      spawnTimer(0.25f), roundTimer(5.0f), renderer_(renderer) {
-    player = new Player(this, renderer, Vector2D(15, 10)); // Đặt nhân vật ở giữa bản đồ
-
+    : level(renderer, 30, 20), spawnTimer(0.25f), roundTimer(5.0f), renderer_(renderer),
+      windowWidth(windowWidth), windowHeight(windowHeight) {
+    player = new Player(this, renderer, Vector2D(15, 10));
     hud = new HUD(renderer, player);
 
+    SDL_Texture* fire = TextureLoader::loadTexture(renderer, "Fire.jpg");
+    SDL_Texture* ice = TextureLoader::loadTexture(renderer, "Ice.jpg");
+    hud->addSkill(fire, 5.0f);
+    hud->addSkill(ice, 10.0f);
+}
 
-        // Hiển thị menu trước khi vào game
-    if (!showMenu(renderer)) {
-        return; // Nếu người chơi không chọn Play, thoát game
+void Game::run() {
+    if (!showMenu(renderer_)) {
+        setState(GameState::Quit);
+        return;
     }
 
+    auto time1 = std::chrono::system_clock::now();
+    auto time2 = std::chrono::system_clock::now();
+    const float dT = 1.0f / 60.0f;
+    bool running = true;
 
-// Load icon kỹ năng
-SDL_Texture* fireballIcon = TextureLoader::loadTexture(renderer, "Icon9.png");
-SDL_Texture* shieldIcon = TextureLoader::loadTexture(renderer, "Icon10.png");
+    while (running) {
+        time2 = std::chrono::system_clock::now();
+        std::chrono::duration<float> timeDelta = time2 - time1;
+        float timeDeltaFloat = timeDelta.count();
 
-// Thêm kỹ năng vào HUD
-hud->addSkill(fireballIcon, 5.0f);  // Kỹ năng Fireball có cooldown 5s
-hud->addSkill(shieldIcon, 10.0f);   // Kỹ năng Shield có cooldown 10s
-
-    //Run the game.
-    if (window != nullptr && renderer != nullptr) {
-        //Load the overlay texture.
-
-        //Store the current times for the clock.
-        auto time1 = std::chrono::system_clock::now();
-        auto time2 = std::chrono::system_clock::now();
-
-        //The amount of time for each frame (60 fps).
-        const float dT = 1.0f / 60.0f;
-
-
-        //Start the game loop and run until it's time to stop.
-        bool running = true;
-        while (running) {
-            //Determine how much time has elapsed since the last frame.
-            time2 = std::chrono::system_clock::now();
-            std::chrono::duration<float> timeDelta = time2 - time1;
-            float timeDeltaFloat = timeDelta.count();
-
-            //If enough time has passed then do everything required to generate the next frame.
-            if (timeDeltaFloat >= dT) {
-                //Store the new time for the next frame.
-                time1 = time2;
-
-                processEvents(renderer, running);
-                update(renderer, dT, level);
-                draw(renderer);
+        if (timeDeltaFloat >= dT) {
+            time1 = time2;
+            processEvents(renderer_, running);
+            update(renderer_, dT, level);
+            if (gameState == GameState::Gameplay || gameState == GameState::GameOver) {
+                draw(renderer_);
+            }
+            if (gameState == GameState::Quit) {
+                running = false;
             }
         }
     }
 }
 
-
 Game::~Game() {
-    //Clean up.
+    delete player;
+    delete hud;
     TextureLoader::deallocateTextures();
 }
-
-
 
 void Game::processEvents(SDL_Renderer* renderer, bool& running) {
     bool mouseDownThisFrame = false;
@@ -84,6 +70,10 @@ void Game::processEvents(SDL_Renderer* renderer, bool& running) {
             break;
 
             }
+
+    // Gọi handleInput của HUD để xử lý thanh trượt âm lượng
+        if (hud->handleInput(event, this)) {
+            continue; // Nếu đang kéo slider, không xử lý input khác
         }
 
     const Uint8* keyState = SDL_GetKeyboardState(NULL);
@@ -115,6 +105,7 @@ void Game::processEvents(SDL_Renderer* renderer, bool& running) {
     }
     player->handleInput(keyState, renderer);
 }
+}
 
 
 
@@ -122,61 +113,62 @@ void Game::processEvents(SDL_Renderer* renderer, bool& running) {
 
 
 void Game::update(SDL_Renderer* renderer, float dT, Level& level) {
-     if (player->isDead) {
-        player->deathTimer.countDown(dT);
-        player->frameTimer += dT;
-
-        // Chạy animation chết
-        if (player->frameTimer >= player->frameTime) {
-            player->frameTimer = 0.0f;
-            if (player->frame < 6) {
-                player->frame++;
-            } else {
-                gameOver = true; // Khi chạy hết animation chết
+    switch (gameState) {
+        case GameState::Gameplay:
+            if (player->isDead) {
+                player->deathTimer.countDown(dT);
+                player->frameTimer += dT;
+                if (player->frameTimer >= player->frameTime) {
+                    player->frameTimer = 0.0f;
+                    if (player->frame < 6) {
+                        player->frame++;
+                    } else {
+                        gameState = GameState::GameOver;
+                    }
+                }
+                return;
             }
-        }
 
-        if (gameOver) {
+            updateUnits(dT);
+            for (auto& coin : coins) coin->update(dT);
+            updateFireEffects(dT);
+            updateIceEffects(dT);
+            updateSpawnUnitsIfRequired(renderer, dT);
+            player->update(dT, listUnits, renderer, level);
+            hud->update(dT, listUnits);
+            level.checkPotionPickup(player->getPos(), player);
+            updateCamera();
+
+            if (!bossSpawned && spawnUnitCount == 0 && allEnemiesDead()) {
+                std::cout << "Tất cả quái đã chết! Spawn boss...\n";
+                triggerBossSpawn();
+            }
+
+            // Kiểm tra Boss chết
+            if (bossSpawned && allEnemiesDead()) {
+                std::cout << "Boss đã chết! Phá đảo Map 1.\n";
+                gameState = GameState::Victory; // Chuyển sang trạng thái Victory
+            }
+            break;
+
+        case GameState::GameOver:
             showGameOverMenu(renderer);
-        }
+            break;
 
-        return; // Ngưng update nếu nhân vật chết
+        case GameState::Menu:
+            break;
+
+        case GameState::Victory:
+            showVictoryMenu(renderer); // Hiển thị khung Victory
+            break;
+
+        case GameState::Paused:
+            showPauseMenu(renderer); // Hiển thị Pause Menu
+            break;
+
+        case GameState::Quit:
+            break;
     }
-
-    //Update the units.
-    updateUnits(dT);
-
-
-    // Cập nhật coin
-    for (auto& coin : coins) {
-        coin->update(dT);
-    }
-    //Update the projectiles.
-
-    updateFireEffects(dT);
-
-    updateIceEffects(dT);
-
-
-    updateSpawnUnitsIfRequired(renderer, dT);
-
-    player->update(dT, listUnits, renderer, level);
-
-    hud->update(dT);
-
-    level.checkPotionPickup(player->getPos(), player);
-
-
-
-
-    updateCamera();
-
-    if (!bossSpawned && spawnUnitCount == 0 && allEnemiesDead()) {
-    std::cout << "Tất cả quái đã chết! Spawn boss...\n";
-    triggerBossSpawn();
-}
-
-
 }
 
 
@@ -184,24 +176,19 @@ void Game::update(SDL_Renderer* renderer, float dT, Level& level) {
 
 
 void Game::updateUnits(float dT) {
-    std::cout << "Game::updateUnits - Total units: " << listUnits.size() << std::endl;
-    auto it = listUnits.begin();
-    while (it != listUnits.end()) {
-        bool increment = true;
-        if ((*it) != nullptr) {
-            std::cout << "Updating unit at pos: " << (*it)->getPos().x << ", " << (*it)->getPos().y
-                      << " - Type: " << typeid(**it).name() << std::endl;
-            (*it)->update(dT, level, listUnits, *player);
-            if ((*it)->isAlive() == false) {
-                it = listUnits.erase(it);
-                increment = false;
-            }
+    // Cập nhật trước
+    for (auto& unit : listUnits) {
+        if (unit) {
+            unit->update(dT, level, listUnits, *player);
         }
-        if (increment)
-            it++;
     }
+    // Xóa sau
+    listUnits.erase(
+        std::remove_if(listUnits.begin(), listUnits.end(),
+            [](const std::shared_ptr<Unit>& unit) { return !unit || unit->isDead(); }),
+        listUnits.end()
+    );
 }
-
 
 
 
@@ -245,40 +232,25 @@ void Game::updateSpawnUnitsIfRequired(SDL_Renderer* renderer, float dT) {
 
 
 void Game::draw(SDL_Renderer* renderer) {
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-    SDL_RenderClear(renderer);
+    SDL_SetRenderDrawColor(renderer, 34, 139, 34, 255); // Màu xanh lá cây giống cỏ
+    SDL_RenderClear(renderer); // Xóa sạch renderer
 
     level.draw(renderer, tileSize, cameraPos.x, cameraPos.y);
-
-
-    for (auto& unitSelected : listUnits)
-        if (unitSelected != nullptr)
-            unitSelected->draw(renderer, tileSize, cameraPos);
-
-    for (auto& projectileSelected : listProjectiles)
-        projectileSelected.draw(renderer, tileSize, cameraPos);
-
-    for (auto& fireEffect : listFireEffects) // Vẽ hiệu ứng lửa
-        fireEffect.draw(renderer, tileSize, cameraPos);
-
-    for (auto& iceEffect : listIceEffects) // Vẽ hiệu ứng băng
-        iceEffect.draw(renderer, tileSize, cameraPos);
-
-    player->draw(renderer, tileSize, cameraPos);
-
     level.drawDecor(renderer, cameraPos.x, cameraPos.y);
 
-     // ⭐ Thêm thanh máu và mana của người chơi ⭐
+    for (auto& unitSelected : listUnits)
+        if (unitSelected) unitSelected->draw(renderer, tileSize, cameraPos);
+    for (auto& fireEffect : listFireEffects)
+        fireEffect.draw(renderer, tileSize, cameraPos);
+    for (auto& iceEffect : listIceEffects)
+        iceEffect.draw(renderer, tileSize, cameraPos);
+    player->draw(renderer, tileSize, cameraPos);
     hud->draw(renderer);
-
-    for (auto& coin : coins) {
-    coin->draw(renderer, tileSize, cameraPos);
-}
-
+    for (auto& coin : coins)
+        coin->draw(renderer, tileSize, cameraPos);
 
     SDL_RenderPresent(renderer);
 }
-
 
 
 void Game::addUnit(SDL_Renderer* renderer, Vector2D posMouse) {
@@ -338,15 +310,48 @@ void Game::triggerBossSpawn() {
 }
 
 void Game::spawnBoss() {
+    if (!renderer_) {
+        std::cout << "Error: Renderer is null in Game::spawnBoss!" << std::endl;
+        return;
+    }
+
     std::cout << "Boss đã xuất hiện tại vị trí cố định!\n";
-    Vector2D bossPosition = player->getPos() + Vector2D(5, 5); // Đặt xa player
+
+    // Lấy vị trí player
+    Vector2D playerPos = player->getPos();
+    std::cout << "Player Pos: (" << playerPos.x << ", " << playerPos.y << ")\n";
+
+    // Chọn hướng ngẫu nhiên hoặc cố định (ví dụ: bên phải player)
+    Vector2D bossOffset(3.0f, 0.0f); // Cách player 3 đơn vị bên phải, bạn có thể thay đổi
+    // Một số tùy chọn khác:
+    // Vector2D bossOffset(-3.0f, 0.0f); // Bên trái
+    // Vector2D bossOffset(0.0f, -3.0f); // Phía trên
+    // Vector2D bossOffset(0.0f, 3.0f);  // Phía dưới
+
+    Vector2D bossPosition = playerPos + bossOffset;
+
+    // Giới hạn vị trí trong bản đồ
+    float maxX = static_cast<float>(level.GetX() - 1); // tileCountX - 1
+    float maxY = static_cast<float>(level.GetY() - 1); // tileCountY - 1
+    bossPosition.x = std::max(0.5f, std::min(bossPosition.x, maxX - 0.5f));
+    bossPosition.y = std::max(0.5f, std::min(bossPosition.y, maxY - 0.5f));
+
+    // Tạo boss
     auto boss = std::make_shared<Boss>(renderer_, bossPosition);
+    if (!boss) {
+        std::cout << "Error: Failed to create Boss!" << std::endl;
+        return;
+    }
+
+    // Thêm vào danh sách đơn vị
     listUnits.push_back(boss);
     bossSpawned = true;
-    std::cout << "Boss HP: " << boss->getHealth() << ", Pos: (" << bossPosition.x << ", " << bossPosition.y
+
+    // Debug thông tin
+    std::cout << "Boss HP: " << boss->getHealth()
+              << ", Pos: (" << bossPosition.x << ", " << bossPosition.y
               << "), List size: " << listUnits.size() << "\n";
 }
-
 void Game::updateFireEffects(float dT) {
     auto it = listFireEffects.begin();
     while (it != listFireEffects.end()) {
@@ -376,10 +381,8 @@ void Game::updateIceEffects(float dT) {
 bool Game::showMenu(SDL_Renderer* renderer) {
     bool inMenu = true;
     AudioManager::init();
-
-    // Phát nhạc menu
     AudioManager::playMusic("Data/Sound/Pixel2.ogg", -1);
-     Mix_VolumeMusic(30);
+    Mix_VolumeMusic(30);
 
     bool playSelected = false;
 
@@ -388,12 +391,12 @@ bool Game::showMenu(SDL_Renderer* renderer) {
     SDL_Texture* playButtonHover = TextureLoader::loadTexture(renderer, "play03.png");
     SDL_Texture* aboutButton = TextureLoader::loadTexture(renderer, "about_button.png");
     SDL_Texture* aboutButtonHover = TextureLoader::loadTexture(renderer, "about03.png");
-    SDL_Texture* storeButton = TextureLoader::loadTexture(renderer, "store_button.png");
-    SDL_Texture* storeButtonHover = TextureLoader::loadTexture(renderer, "store03.png");
+    SDL_Texture* storeButton = TextureLoader::loadTexture(renderer, "back_button.png");
+    SDL_Texture* storeButtonHover = TextureLoader::loadTexture(renderer, "back03.png");
 
-    SDL_Rect playRect = { 100, 240, 200, 80 };
-    SDL_Rect aboutRect = { 350, 240, 200, 80 };
-    SDL_Rect storeRect = { 600, 240, 200, 80 };
+    SDL_Rect playRect = { 100, 240, 150, 60 };
+    SDL_Rect aboutRect = { 350, 240, 150, 60 };
+    SDL_Rect storeRect = { 600, 240, 150, 60 };
 
     while (inMenu) {
         SDL_Event event;
@@ -409,65 +412,45 @@ bool Game::showMenu(SDL_Renderer* renderer) {
 
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
+                gameState = GameState::Quit;
                 inMenu = false;
+                playSelected = false;
                 break;
             } else if (event.type == SDL_MOUSEBUTTONDOWN) {
                 if (isHoverPlay) {
                     AudioManager::playSound("Data/Sound/Wood Block1.mp3");
                     playSelected = true;
+                    gameState = GameState::Gameplay;
                     inMenu = false;
                 }
-
                 if (isHoverAbout) {
                     AudioManager::playSound("Data/Sound/Wood Block1.mp3");
                     if (showAboutScreen(renderer)) {
                         inMenu = false;
                     }
                 }
-
                 if (isHoverStore) {
                     AudioManager::playSound("Data/Sound/Wood Block1.mp3");
-                    std::cout << "Store: Mở cửa hàng (chưa làm chức năng)\n";
+                    gameState = GameState::Quit;
+                    inMenu = false;              // Thoát vòng lặp menu
+                    playSelected = false;        // Đảm bảo không vào Gameplay
+                    break;
                 }
             }
         }
 
         SDL_RenderClear(renderer);
         SDL_RenderCopy(renderer, background, nullptr, nullptr);
-
         SDL_RenderCopy(renderer, isHoverPlay ? playButtonHover : playButton, nullptr, &playRect);
         SDL_RenderCopy(renderer, isHoverAbout ? aboutButtonHover : aboutButton, nullptr, &aboutRect);
         SDL_RenderCopy(renderer, isHoverStore ? storeButtonHover : storeButton, nullptr, &storeRect);
-
         SDL_RenderPresent(renderer);
     }
 
-    // Hiệu ứng fade-out
-    int alpha = 255;
-    while (alpha > 0) {
-        SDL_SetTextureAlphaMod(background, alpha);
-        SDL_SetTextureAlphaMod(playButton, alpha);
-        SDL_SetTextureAlphaMod(aboutButton, alpha);
-        SDL_SetTextureAlphaMod(storeButton, alpha);
-
-        SDL_RenderClear(renderer);
-        SDL_RenderCopy(renderer, background, nullptr, nullptr);
-        SDL_RenderCopy(renderer, playButton, nullptr, &playRect);
-        SDL_RenderCopy(renderer, aboutButton, nullptr, &aboutRect);
-        SDL_RenderCopy(renderer, storeButton, nullptr, &storeRect);
-        SDL_RenderPresent(renderer);
-
-        alpha -= 5;
-        SDL_Delay(10);
-    }
-
-    // Hủy nhạc menu khi rời khỏi menu
-    Mix_HaltMusic();
-
-    // Phát nhạc game
     if (playSelected) {
+        Mix_HaltMusic();
         AudioManager::playMusic("Data/Sound/Pixel 5.mp3", -1);
-         Mix_VolumeMusic(30);
+        Mix_VolumeMusic(30);
     }
 
     SDL_DestroyTexture(background);
@@ -480,7 +463,6 @@ bool Game::showMenu(SDL_Renderer* renderer) {
 
     return playSelected;
 }
-
 
 bool Game::showAboutScreen(SDL_Renderer* renderer) {
     bool inAbout = true;
@@ -542,9 +524,9 @@ bool Game::showAboutScreen(SDL_Renderer* renderer) {
         SDL_Rect infoBox = { 100, 100, 600, 400 };
         SDL_RenderFillRect(renderer, &infoBox);
 
-        renderText(renderer, "Tower Base Defense", 140, 120, 32);
-        renderText(renderer, "Developer: Capybara Dev", 140, 170, 24);
-        renderText(renderer, "Fight enemies and defend your base!", 140, 220, 24);
+        renderText(renderer, "Not Your Own Adventure !", 140, 120, 32);
+        renderText(renderer, "Developer: Capybara ", 140, 170, 24);
+        renderText(renderer, "Fight enemies and enjoy your adventure !", 140, 220, 24);
         renderText(renderer, "Press back to return to menu.", 140, 270, 24);
 
         SDL_RenderCopy(renderer, isButtonHover ? backButtonHover : backButton, nullptr, &backRect);
@@ -608,18 +590,13 @@ void Game::showGameOverMenu(SDL_Renderer* renderer) {
     AudioManager::init();
     SDL_Event event;
 
-    // Load ảnh khung nền
     SDL_Texture* menuBackground = TextureLoader::loadTexture(renderer, "cut_frame_fixed.png");
-
     SDL_Texture* restartTexture = TextureLoader::loadTexture(renderer, "restart01.png");
     SDL_Texture* quitTexture = TextureLoader::loadTexture(renderer, "back_button.png");
     SDL_Texture* restartHoverTexture = TextureLoader::loadTexture(renderer, "restart03.png");
     SDL_Texture* quitHoverTexture = TextureLoader::loadTexture(renderer, "back03.png");
 
-    // Vị trí khung nền
-    SDL_Rect menuRect = { windowWidth / 2 - 200 , windowHeight / 2 - 120, 400, 120 };
-
-    // Vị trí các nút
+    SDL_Rect menuRect = { windowWidth / 2 - 200, windowHeight / 2 - 120, 400, 120 };
     SDL_Rect retryButton = { windowWidth / 2 - 150, windowHeight / 2 - 50, 100, 40 };
     SDL_Rect quitButton = { windowWidth / 2 + 55, windowHeight / 2 - 50, 100, 40 };
 
@@ -628,64 +605,203 @@ void Game::showGameOverMenu(SDL_Renderer* renderer) {
         SDL_GetMouseState(&mouseX, &mouseY);
         bool isRestart = (mouseX >= retryButton.x && mouseX <= retryButton.x + retryButton.w &&
                           mouseY >= retryButton.y && mouseY <= retryButton.y + retryButton.h);
-
         bool isQuit = (mouseX >= quitButton.x && mouseX <= quitButton.x + quitButton.w &&
                        mouseY >= quitButton.y && mouseY <= quitButton.y + quitButton.h);
 
         while (SDL_PollEvent(&event)) {
             switch (event.type) {
                 case SDL_QUIT:
+                    gameState = GameState::Quit;
                     selecting = false;
-                    exit(0);
                     break;
                 case SDL_MOUSEBUTTONDOWN:
                     if (isRestart) {
                         AudioManager::playSound("Data/Sound/Wood Block1.mp3");
                         restartGame();
+                        gameState = GameState::Gameplay;
                         selecting = false;
                     }
-
                     if (isQuit) {
                         AudioManager::playSound("Data/Sound/Wood Block1.mp3");
-                        showMenu(renderer);
-                        selecting = false;
                         restartGame();
+                        if (showMenu(renderer)) {
+                            gameState = GameState::Gameplay;
+                        } else {
+                            gameState = GameState::Quit;
+                        }
+                        selecting = false;
                     }
                     break;
             }
         }
 
-        // Vẽ ảnh nền khung
+        // Vẽ lại khung cảnh gameplay thay vì xóa màn hình
+        level.draw(renderer, tileSize, cameraPos.x, cameraPos.y);
+        for (auto& unitSelected : listUnits)
+            if (unitSelected != nullptr)
+                unitSelected->draw(renderer, tileSize, cameraPos);
+        for (auto& fireEffect : listFireEffects)
+            fireEffect.draw(renderer, tileSize, cameraPos);
+        for (auto& iceEffect : listIceEffects)
+            iceEffect.draw(renderer, tileSize, cameraPos);
+        player->draw(renderer, tileSize, cameraPos);
+        level.drawDecor(renderer, cameraPos.x, cameraPos.y);
+        hud->draw(renderer);
+        for (auto& coin : coins)
+            coin->draw(renderer, tileSize, cameraPos);
+
+        // Vẽ menu Game Over lên trên
         SDL_RenderCopy(renderer, menuBackground, nullptr, &menuRect);
-
-        // Vẽ chữ
         renderText(renderer, "YOU LOST!", windowWidth / 2 - 50, windowHeight / 2 - 80, 30);
-
-        // Vẽ các nút
         SDL_RenderCopy(renderer, isRestart ? restartHoverTexture : restartTexture, nullptr, &retryButton);
         SDL_RenderCopy(renderer, isQuit ? quitHoverTexture : quitTexture, nullptr, &quitButton);
 
         SDL_RenderPresent(renderer);
     }
 
-    // Giải phóng bộ nhớ
     SDL_DestroyTexture(menuBackground);
     SDL_DestroyTexture(restartTexture);
     SDL_DestroyTexture(quitTexture);
+    SDL_DestroyTexture(restartHoverTexture);
+    SDL_DestroyTexture(quitHoverTexture);
 }
 
-
 void Game::restartGame() {
-    // Reset trạng thái game
     player->reset();
     listUnits.clear();
-    listProjectiles.clear();
     listFireEffects.clear();
     listIceEffects.clear();
     coins.clear();
-
     bossSpawned = false;
     spawnUnitCount = 15;
     gameOver = false;
+    gameState = GameState::Gameplay;
 }
 
+void Game::showVictoryMenu(SDL_Renderer* renderer) {
+    bool selecting = true;
+    SDL_Event event;
+
+    SDL_Texture* victoryBackground = TextureLoader::loadTexture(renderer, "cut_frame_fixed.png"); // Giả định có file ảnh
+    SDL_Texture* menuButton = TextureLoader::loadTexture(renderer, "back_button.png");
+    SDL_Texture* menuButtonHover = TextureLoader::loadTexture(renderer, "back03.png");
+
+    SDL_Rect victoryRect = { windowWidth / 2 - 200, windowHeight / 2 - 120, 400, 200 };
+    SDL_Rect menuRect = { windowWidth / 2 - 50, windowHeight / 2 - 10, 100, 40 };
+
+    while (selecting) {
+        int mouseX, mouseY;
+        SDL_GetMouseState(&mouseX, &mouseY);
+        bool isMenuHover = (mouseX >= menuRect.x && mouseX <= menuRect.x + menuRect.w &&
+                            mouseY >= menuRect.y && mouseY <= menuRect.y + menuRect.h);
+
+        while (SDL_PollEvent(&event)) {
+            switch (event.type) {
+                case SDL_QUIT:
+                    gameState = GameState::Quit;
+                    selecting = false;
+                    break;
+                case SDL_MOUSEBUTTONDOWN:
+                    if (isMenuHover) {
+                        AudioManager::playSound("Data/Sound/Wood Block1.mp3");
+                        restartGame(); // Reset game trước khi về menu
+                        if (showMenu(renderer)) {
+                            gameState = GameState::Gameplay;
+                        } else {
+                            gameState = GameState::Quit;
+                        }
+                        selecting = false;
+                    }
+                    break;
+            }
+        }
+
+        // Vẽ lại khung cảnh gameplay làm nền
+        level.draw(renderer, tileSize, cameraPos.x, cameraPos.y);
+        for (auto& unitSelected : listUnits)
+            if (unitSelected != nullptr)
+                unitSelected->draw(renderer, tileSize, cameraPos);
+        for (auto& fireEffect : listFireEffects)
+            fireEffect.draw(renderer, tileSize, cameraPos);
+        for (auto& iceEffect : listIceEffects)
+            iceEffect.draw(renderer, tileSize, cameraPos);
+        player->draw(renderer, tileSize, cameraPos);
+        level.drawDecor(renderer, cameraPos.x, cameraPos.y);
+        hud->draw(renderer);
+        for (auto& coin : coins)
+            coin->draw(renderer, tileSize, cameraPos);
+
+        // Vẽ khung Victory
+        SDL_RenderCopy(renderer, victoryBackground, nullptr, &victoryRect);
+        renderText(renderer, "Map 1 cleared!", windowWidth / 2 - 80, windowHeight / 2 - 80, 30);
+        renderText(renderer, "New map is updating...", windowWidth / 2 - 80, windowHeight / 2 - 50, 20);
+        SDL_RenderCopy(renderer, isMenuHover ? menuButtonHover : menuButton, nullptr, &menuRect);
+
+        SDL_RenderPresent(renderer);
+    }
+
+    SDL_DestroyTexture(victoryBackground);
+    SDL_DestroyTexture(menuButton);
+    SDL_DestroyTexture(menuButtonHover);
+}
+
+void Game::showPauseMenu(SDL_Renderer* renderer) {
+    bool paused = true;
+    SDL_Event event;
+
+    SDL_Texture* pauseBackground = TextureLoader::loadTexture(renderer, "cut_frame_fixed.png"); // Giả định file ảnh
+    SDL_Texture* resumeButton = TextureLoader::loadTexture(renderer, "back_button.png");
+    SDL_Texture* resumeButtonHover = TextureLoader::loadTexture(renderer, "back03.png");
+
+    SDL_Rect pauseRect = { windowWidth / 2 - 200, windowHeight / 2 - 120, 400, 120 };
+    SDL_Rect resumeRect = { windowWidth / 2 - 50, windowHeight / 2 + 20, 100, 40 };
+
+    while (paused) {
+        int mouseX, mouseY;
+        SDL_GetMouseState(&mouseX, &mouseY);
+        bool isResumeHover = (mouseX >= resumeRect.x && mouseX <= resumeRect.x + resumeRect.w &&
+                              mouseY >= resumeRect.y && mouseY <= resumeRect.y + resumeRect.h);
+
+        while (SDL_PollEvent(&event)) {
+            switch (event.type) {
+                case SDL_QUIT:
+                    gameState = GameState::Quit;
+                    paused = false;
+                    break;
+                case SDL_MOUSEBUTTONDOWN:
+                    if (isResumeHover) {
+                        AudioManager::playSound("Data/Sound/Wood Block1.mp3");
+                        gameState = GameState::Gameplay; // Tiếp tục game
+                        paused = false;
+                    }
+                    break;
+            }
+        }
+
+        // Vẽ lại khung cảnh gameplay làm nền
+        level.draw(renderer, tileSize, cameraPos.x, cameraPos.y);
+        for (auto& unitSelected : listUnits)
+            if (unitSelected != nullptr)
+                unitSelected->draw(renderer, tileSize, cameraPos);
+        for (auto& fireEffect : listFireEffects)
+            fireEffect.draw(renderer, tileSize, cameraPos);
+        for (auto& iceEffect : listIceEffects)
+            iceEffect.draw(renderer, tileSize, cameraPos);
+        player->draw(renderer, tileSize, cameraPos);
+        level.drawDecor(renderer, cameraPos.x, cameraPos.y);
+        hud->draw(renderer);
+        for (auto& coin : coins)
+            coin->draw(renderer, tileSize, cameraPos);
+
+        // Vẽ khung Pause
+        SDL_RenderCopy(renderer, pauseBackground, nullptr, &pauseRect);
+        renderText(renderer, "Game Paused", windowWidth / 2 - 80, windowHeight / 2 - 50, 24);
+        SDL_RenderCopy(renderer, isResumeHover ? resumeButtonHover : resumeButton, nullptr, &resumeRect);
+
+        SDL_RenderPresent(renderer);
+    }
+
+    SDL_DestroyTexture(pauseBackground);
+    SDL_DestroyTexture(resumeButton);
+    SDL_DestroyTexture(resumeButtonHover);
+}

@@ -1,6 +1,7 @@
 #include "Coin.h"
 #include <iostream>
-#include "AudioManager.h"
+#include "Support/AudioManager.h"
+#include "Support/TextureLoader.h"
 Coin::Coin(Vector2D position, SDL_Renderer* renderer) : pos(position) {
     if (!renderer) {
         std::cout << "Error: Renderer is nullptr in Coin constructor!" << std::endl;

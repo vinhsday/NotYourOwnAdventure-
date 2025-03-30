@@ -1,11 +1,10 @@
 #pragma once
 #include "SDL.h"
-#include "Vector2D.h"
-#include "TextureLoader.h"
-#include "Timer.h"
+#include "../Support/Vector2D.h"
+#include "../Support/TextureLoader.h"
+#include "../Support/Timer.h"
 #include <vector>
-#include "Unit.h"
-
+#include "../Enemies/Unit.h"
 class Unit;
 
 class FireEffect {

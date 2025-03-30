@@ -1,6 +1,6 @@
 #include "Player.h"
 #include "iostream"
-#include "AudioManager.h"
+#include "Support/AudioManager.h"
 
 Player::Player(Game* gamePtr, SDL_Renderer* renderer, Vector2D startPos)
     : game(gamePtr), pos(startPos), lastDirection(0) {

@@ -5,14 +5,17 @@
 class Boss : public Unit {
 public:
     Boss(SDL_Renderer* renderer, Vector2D spawnPos);
-    void update(float dT, Level& level, std::vector<std::shared_ptr<Unit>>& listUnits, Player& player) override; // Xóa renderer
+    void update(float dT, Level& level, std::vector<std::shared_ptr<Unit>>& listUnits, Player& player) override;
     void draw(SDL_Renderer* renderer, int tileSize, Vector2D cameraPos) override;
     int getHealth() { return health; }
     void summonMinions(SDL_Renderer* renderer, Level& level, std::vector<std::shared_ptr<Unit>>& listUnits);
+    SDL_Rect getHitbox() const;
 
 private:
     void loadAnimations(SDL_Texture* spriteSheet, std::vector<SDL_Rect>& frames, int frameCount);
+    void drawHealthBar(SDL_Renderer* renderer, int tileSize, Vector2D cameraPos);
 
+    SDL_Renderer* renderer_;
     SDL_Texture* idleTexture;
     SDL_Texture* spawnTexture;
     SDL_Texture* attackTexture;
@@ -34,14 +37,14 @@ private:
     int attackFrame = 0;
 
     float animationTimer = 0.0f;
-    float frameTimeBoss = 0.18f;
+    float frameTimeBoss = 1.0f / 15.0f; // Mặc định 15 FPS
     float summonTimer = 0.0f;
-
     bool isSummoning = false;
-
     float idleTimer = 0.0f;
     float idleDuration = 2.0f;
     bool isIdle = false;
+    bool hurtAnimationFinished = false; // Theo dõi khi Hurt kết thúc
 
-    SDL_Renderer* renderer_; // Lưu renderer trong class
+    int frameWidth = 120;
+    int frameHeight = 120;
 };

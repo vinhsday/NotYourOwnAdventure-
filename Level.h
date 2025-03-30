@@ -3,8 +3,8 @@
 #include <vector>
 #include <string>
 #include "SDL.h"
-#include "Vector2D.h"
-#include "TextureLoader.h"
+#include "Support/Vector2D.h"
+#include "Support/Vector2D.h"
 #include <chrono>
 #include <vector>
 #include "Coin.h"

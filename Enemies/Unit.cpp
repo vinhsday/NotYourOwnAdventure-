@@ -1,7 +1,7 @@
 #include "Unit.h"
-#include "Game.h"
+#include "../Game.h"
 #include <iostream>
-#include "AudioManager.h"
+#include "../Support/AudioManager.h"
 
 
 const float Unit::size = 0.48f;
@@ -14,7 +14,7 @@ Unit::Unit(SDL_Renderer* renderer, Vector2D setPos)
     textureHurt = TextureLoader::loadTexture(renderer, "Slime_hurt.png");
     textureDeath = TextureLoader::loadTexture(renderer, "Slime_death.png");
     speed = 0.5f;
-
+    frameTime = 1.0f / 15.0f;
 }
 
 void Unit::update(float dT, Level& level, std::vector<std::shared_ptr<Unit>>& listUnits, Player& player) {
@@ -27,7 +27,7 @@ void Unit::update(float dT, Level& level, std::vector<std::shared_ptr<Unit>>& li
 
         if (frameTimer >= frameTime) {
             frameTimer = 0.0f;
-            frame = std::min(frame + 1, getFrameCount() - 1);
+            if (frame < getFrameCount() - 1) frame++; // Không lặp lại khi hết frame
         }
 
         if (timerDeath.timeSIsZero()) {
@@ -44,7 +44,8 @@ void Unit::update(float dT, Level& level, std::vector<std::shared_ptr<Unit>>& li
     frameTimer += dT;
     if (frameTimer >= frameTime) {
         frameTimer = 0.0f;
-        frame = (frame + 1) % getFrameCount();
+        if (state != UnitState::Hurt || frame < getFrameCount() - 1) frame++; // Không lặp Hurt
+        if (frame >= getFrameCount()) frame = 0;
     }
 
     if (state == UnitState::Hurt) {
@@ -173,67 +174,51 @@ Vector2D Unit::getPos() { return pos; }
 
 void Unit::takeDamage(int damage, Game* game) {
     AudioManager::init();
+    if (state == UnitState::Death) return; // Không nhận sát thương khi đã chết
+
     health -= damage;
     if (health <= 0) {
-        AudioManager::playSound("Data/Sound/monster-death-grunt-131480.mp3");
-        Mix_VolumeChunk(AudioManager::getSound("Data/Sound/monster-death-grunt-131480.mp3"), 50); // 32 là âm lượng nhỏ
-
-        setState(UnitState::Death);
-        timerDeath.resetToMax();
-        currentFrame = 0; // Đặt lại khung hình
-        frameTimer = 0.0f; // Reset thời gian
-        if (game) {
-            SDL_Renderer* renderer = game->getRenderer();
-            if (!renderer) {
-                std::cerr << "Error: Renderer is nullptr when creating coin!" << std::endl;
-                return;
-            }
-
-            int numCoins = rand() % 3 + 1; // Quái rơi từ 1-3 coin
-            for (int i = 0; i < numCoins; i++) {
-                AudioManager::playSound("Data/Sound/drop-coin-into-glass-33522.mp3");
-                Mix_VolumeChunk(AudioManager::getSound("Data/Sound/drop-coin-into-glass-33522.mp3"), 50); // 32 là âm lượng nhỏ
-
-                Vector2D coinOffset((rand() % 10 - 5) * 0.1f, (rand() % 10 - 5) * 0.1f);
-                game->coins.push_back(std::make_shared<Coin>(pos + coinOffset, renderer));
+        if (state != UnitState::Death) { // Chỉ chuyển sang Death nếu chưa ở trạng thái này
+            setState(UnitState::Death);
+            timerDeath.resetToMax();
+            frame = 0;
+            frameTimer = 0.0f;
+            if (game) {
+                SDL_Renderer* renderer = game->getRenderer();
+                int numCoins = rand() % 3 + 1;
+                for (int i = 0; i < numCoins; i++) {
+                    AudioManager::playSound("Data/Sound/drop-coin-into-glass-33522.mp3");
+                    Mix_VolumeChunk(AudioManager::getSound("Data/Sound/drop-coin-into-glass-33522.mp3"), 50);
+                    Vector2D coinOffset((rand() % 10 - 5) * 0.1f, (rand() % 10 - 5) * 0.1f);
+                    game->coins.push_back(std::make_shared<Coin>(pos + coinOffset, renderer));
+                }
             }
         }
-
-    } else {
+    } else if (state != UnitState::Hurt) { // Chỉ chuyển sang Hurt nếu chưa ở trạng thái này
         setState(UnitState::Hurt);
         timerJustHurt.resetToMax();
-        currentFrame = 0;
-        frameTimer = 0.0f;  // 🔥 Reset lại frame để animation Hurt chạy từ đầu
+        frame = 0;
+        frameTimer = 0.0f;
     }
 }
 
 
 
 void Unit::setState(UnitState newState) {
-    if (state != newState) {
-        state = newState;
-        frame = 0; // Reset lại frame
+    if (state == newState) return; // 🔥 Tránh reset frame nếu đang cùng trạng thái
 
-        // ✅ Điều chỉnh frameTime theo từng trạng thái
-        switch (state) {
-            case UnitState::Run:
-                frameTime = 0.1f; // Mượt mà
-                break;
-            case UnitState::Attack:
-                frameTime = 0.15f; // Chậm hơn
-                break;
-            case UnitState::Hurt:
-                frameTime = 0.15f; // Ngắn gọn
-                break;
-            case UnitState::Death:
-                frameTime = 0.05f; // Animation chết kéo dài
-                break;
-            default:
-                frameTime = 0.1f;
-                break;
-        }
+    state = newState;
+    frame = 0; // Reset lại frame khi đổi trạng thái
+
+    switch (state) {
+        case UnitState::Run: frameTime = 0.15f; break;
+        case UnitState::Attack: frameTime = 0.1f; break;
+        case UnitState::Hurt: frameTime = 0.2f; break; // 🛠 Điều chỉnh thời gian frame Hurt
+        case UnitState::Death: frameTime = 0.2f; break;
+        default: frameTime = 0.15f; break;
     }
 }
+
 
 
 SDL_Texture* Unit::getTextureForState() {
