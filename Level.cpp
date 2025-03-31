@@ -6,7 +6,7 @@
 
 Level::Level(SDL_Renderer* renderer, int setTileCountX, int setTileCountY)
     : tileCountX(setTileCountX), tileCountY(setTileCountY),
-    targetX(setTileCountX / 2), targetY(setTileCountY / 2){
+      targetX(setTileCountX / 2), targetY(setTileCountY / 2) {
     lastPotionSpawnTime = std::chrono::steady_clock::now() - std::chrono::seconds(15);
     textureGrass = TextureLoader::loadTexture(renderer, "grass.jpg");
     potionHealthTexture = TextureLoader::loadTexture(renderer, "potion.png");

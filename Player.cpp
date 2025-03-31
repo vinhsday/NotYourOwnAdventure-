@@ -4,7 +4,7 @@
 
 Player::Player(Game* gamePtr, SDL_Renderer* renderer, Vector2D startPos)
     : game(gamePtr), pos(startPos), lastDirection(0),
-      currentHP(100), maxHP(100), currentMP(50), maxMP(100),
+      currentHP(100), maxHP(100), currentMP(100), maxMP(100),
       isAttacking(false), frame(0), frameTimer(0.0f), speed(5.0f),
       attackDamage(10), attackRange(1.5f), level(1), coin(0), isDead(false) {
     textureIdleLeft = TextureLoader::loadTexture(renderer, "Idle_left.png");

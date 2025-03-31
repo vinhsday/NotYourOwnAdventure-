@@ -16,15 +16,6 @@ Boss::Boss(SDL_Renderer* renderer, Vector2D spawnPos)
     idleTexture = TextureLoader::loadTexture(renderer, "Boss_idle.png");
     spawnTexture = TextureLoader::loadTexture(renderer, "Boss_spawn.png");
 
-    if (!spawnTexture) {
-        std::cout << "Error: Failed to load Boss_spawn.png" << std::endl;
-    }
-
-    if (!textureRun || !textureAttack || !textureHurt || !textureDeath || !idleTexture) {
-        std::cerr << "Error: One or more boss textures failed to load!" << std::endl;
-        throw std::runtime_error("Boss texture loading failed");
-    }
-
     loadAnimations(spawnTexture, spawnFrames, 11);
     loadAnimations(idleTexture, idleFrames, 6);
     loadAnimations(textureRun, runFrames, 6);
@@ -37,7 +28,6 @@ Boss::Boss(SDL_Renderer* renderer, Vector2D spawnPos)
     spawnTimer = 2.0f;
     frameTimeBoss = 2.0f / 11.0f;
     currentFrame = 0;
-    std::cout << "Boss initialized at pos: (" << pos.x << ", " << pos.y << ")" << std::endl;
 }
 
 void Boss::loadAnimations(SDL_Texture* spriteSheet, std::vector<SDL_Rect>& frames, int frameCount) {
@@ -45,17 +35,11 @@ void Boss::loadAnimations(SDL_Texture* spriteSheet, std::vector<SDL_Rect>& frame
     SDL_QueryTexture(spriteSheet, NULL, NULL, &spriteWidth, &spriteHeight);
     int frameHeight = 120;
 
-    std::cout << "Loading sprite sheet - Width: " << spriteWidth << ", Height: " << spriteHeight
-              << ", FrameCount: " << frameCount << std::endl;
-
     frames.clear();
     for (int i = 0; i < frameCount; i++) {
         SDL_Rect frame = {0, i * frameHeight, spriteWidth, frameHeight};
         frames.push_back(frame);
-        std::cout << "Frame " << i << ": x=" << frame.x << ", y=" << frame.y
-                  << ", w=" << frame.w << ", h=" << frame.h << std::endl;
     }
-    std::cout << "Total frames loaded: " << frames.size() << std::endl;
 }
 
 void Boss::update(float dT, Level& level, std::vector<std::shared_ptr<Unit>>& listUnits, Player& player) {
@@ -123,11 +107,14 @@ void Boss::update(float dT, Level& level, std::vector<std::shared_ptr<Unit>>& li
     }
 
     if (state == UnitState::Death) {
-        if (animationTimer >= frameTimeBoss && currentFrame < deathFrames.size() - 1) {
-            animationTimer = 0.0f;
-            currentFrame++;
-        } else if (currentFrame >= deathFrames.size() - 1) {
-            isdead = true;
+        if (!hurtAnimationFinished) { // Chỉ cập nhật nếu animation chưa xong
+            if (animationTimer >= frameTimeBoss && currentFrame < deathFrames.size() - 1) {
+                animationTimer = 0.0f;
+                currentFrame++;
+            } else if (currentFrame >= deathFrames.size() - 1) {
+                hurtAnimationFinished = true; // Đánh dấu animation đã hoàn tất
+                isdead = true; // Boss chính thức chết
+            }
         }
         return;
     }
@@ -183,7 +170,6 @@ void Boss::draw(SDL_Renderer* renderer, int tileSize, Vector2D cameraPos) {
             case UnitState::Hurt:
                 currentTexture = textureHurt;
                 currentFrameRect = hurtFrames[currentFrame];
-                std::cout << "Boss in Hurt state, frame: " << currentFrame << "\n";
                 break;
             case UnitState::Death: currentTexture = textureDeath; currentFrameRect = deathFrames[currentFrame]; break;
             case UnitState::Idle: default: currentTexture = idleTexture; currentFrameRect = idleFrames[currentFrame]; break;
@@ -195,9 +181,6 @@ void Boss::draw(SDL_Renderer* renderer, int tileSize, Vector2D cameraPos) {
         int yPos = std::round((pos.y - cameraPos.y) * tileSize) - (frameHeight / 2);
         SDL_Rect destRect = {xPos, yPos, frameWidth * 2, frameHeight * 2};
         SDL_RenderCopy(renderer, currentTexture, &currentFrameRect, &destRect);
-        std::cout << "Boss drawn at screen pos: (" << xPos << ", " << yPos << ")\n";
-    } else {
-        std::cout << "Error: No valid texture for Boss in state " << static_cast<int>(state) << "\n";
     }
 
     if (isAlive()) {
@@ -217,7 +200,6 @@ void Boss::summonMinions(SDL_Renderer* renderer, Level& level, std::vector<std::
         summonPos.x = std::max(0.5f, std::min(summonPos.x, (float)level.GetX() - 0.5f));
         summonPos.y = std::max(0.5f, std::min(summonPos.y, (float)level.GetY() - 0.5f));
         listUnits.push_back(std::make_shared<Bat>(renderer, summonPos));
-        std::cout << "Summoned Bat at: (" << summonPos.x << ", " << summonPos.y << ")" << std::endl;
     }
     isSummoning = false;
 }
@@ -250,7 +232,6 @@ void Boss::takeDamage(int damage, Game* game) {
     if (state == UnitState::Death || isSpawning) return; // Không nhận sát thương khi chết hoặc đang spawn
 
     health -= damage;
-    std::cout << "Boss took " << damage << " damage, health now: " << health << "\n";
 
     if (health > 0 && state != UnitState::Hurt) {
         previousState = state; // Lưu trạng thái trước đó

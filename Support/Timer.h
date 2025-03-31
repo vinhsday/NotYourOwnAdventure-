@@ -16,7 +16,6 @@ public:
     bool timeSIsGreaterThanOrEqualTo(float timeSCheck);
 
     // Thêm các phương thức mới
-    bool isFinished() { return timeSIsZero(); } // Kiểm tra nếu timer đã hoàn thành (thời gian về 0)
     void reset(float time) { timeSMax = time; timeSCurrent = time; } // Đặt lại thời gian tối đa và hiện tại
     float getTimeSCurrent() { return timeSCurrent; } // Thêm getter để debug
 };

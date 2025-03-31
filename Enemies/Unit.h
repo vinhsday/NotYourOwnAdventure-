@@ -38,7 +38,6 @@ public:
 	bool isDead();
 	void setState(UnitState state_);
 	virtual int getFrameCount();
-	int getColumnCount();
 	SDL_Texture* getTextureForState();
 
     float getFrameTime();
@@ -74,7 +73,6 @@ private:
 
     float hurtTimer = 0.0f;
 
-    Game* game;
 
     bool frozen = false;
 

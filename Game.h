@@ -34,7 +34,6 @@ public:
     SDL_Renderer* getRenderer() const { return renderer_; }
 
     bool bossSpawned = false;
-    void triggerBossSpawn();
     void spawnBoss();
     bool allEnemiesDead();
 

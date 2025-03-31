@@ -41,11 +41,10 @@ void Coin::draw(SDL_Renderer* renderer, int tileSize, Vector2D cameraPos) {
 }
 
 bool Coin::checkCollision(Vector2D playerPos, float pickupRange) {
-    AudioManager::init();
     if ((pos - playerPos).magnitude() < pickupRange) {
         AudioManager::playSound("Data/Sound/coin_pickup.mp3");
-        Mix_VolumeChunk(AudioManager::getSound("Data/Sound/coin_pickup.mp3"), 50); // 32 là âm lượng nhỏ
-
+        Mix_Chunk* sound = AudioManager::getSound("Data/Sound/coin_pickup.mp3");
+        if (sound) Mix_VolumeChunk(sound, 50);
         collected = true;
         return true;
     }

@@ -9,7 +9,6 @@ public:
     void draw(SDL_Renderer* renderer, int tileSize, Vector2D cameraPos) override;
     int getHealth() { return health; }
     void summonMinions(SDL_Renderer* renderer, Level& level, std::vector<std::shared_ptr<Unit>>& listUnits);
-    SDL_Rect getHitbox() const;
     void takeDamage(int damage, Game* game) override;
 private:
     void loadAnimations(SDL_Texture* spriteSheet, std::vector<SDL_Rect>& frames, int frameCount);

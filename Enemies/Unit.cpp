@@ -18,8 +18,6 @@ Unit::Unit(SDL_Renderer* renderer, Vector2D setPos)
 }
 
 void Unit::update(float dT, Level& level, std::vector<std::shared_ptr<Unit>>& listUnits, Player& player) {
-    std::cout << "Unit::update - currentFrame: " << currentFrame << std::endl;
-    AudioManager::init();
 
     if (state == UnitState::Death) {
         timerDeath.countDown(dT);
@@ -173,7 +171,6 @@ bool Unit::isDead() { return isdead; }
 Vector2D Unit::getPos() { return pos; }
 
 void Unit::takeDamage(int damage, Game* game) {
-    AudioManager::init();
     if (state == UnitState::Death) return; // Không nhận sát thương khi đã chết
 
     health -= damage;

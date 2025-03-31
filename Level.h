@@ -63,7 +63,7 @@ private:
 	std::vector<Tile> listTiles;
 	const int tileCountX, tileCountY;
 
-	const int targetX = 0, targetY = 0;
+    int targetX = 0, targetY = 0;
 
 
 	private:

@@ -13,6 +13,7 @@
 Game::Game(SDL_Window* window, SDL_Renderer* renderer, int windowWidth, int windowHeight)
     : level(renderer, 30, 20), spawnTimer(0.25f), roundTimer(5.0f), renderer_(renderer),
       windowWidth(windowWidth), windowHeight(windowHeight) {
+    AudioManager::init();
     player = new Player(this, renderer, Vector2D(15, 10));
     hud = new HUD(renderer, player);
 
