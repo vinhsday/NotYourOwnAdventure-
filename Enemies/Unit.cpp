@@ -7,7 +7,7 @@
 const float Unit::size = 0.48f;
 
 Unit::Unit(SDL_Renderer* renderer, Vector2D setPos)
-    : pos(setPos), speed(1.0f), health(10), maxHealth(10), attackDamage(5), attackRange(0.5f) {
+    : pos(setPos), speed(1.0f), health(20), maxHealth(20), attackDamage(5), attackRange(0.5f) {
 
     textureRun = TextureLoader::loadTexture(renderer, "Slime_run.png");
     textureAttack = TextureLoader::loadTexture(renderer, "Slime_attack.png");
@@ -109,8 +109,8 @@ void Unit::update(float dT, Level& level, std::vector<std::shared_ptr<Unit>>& li
 
     // 🗡 Tấn công người chơi
     if (length < attackRange && damageCooldown.timeSIsZero()) {
-        AudioManager::playSound("Data/Sound/small-monster-attack-195712.mp3");
-        Mix_VolumeChunk(AudioManager::getSound("Data/Sound/small-monster-attack-195712.mp3"), 50); // 32 là âm lượng nhỏ
+        AudioManager::playSound("Data/Sound/monster_attack.mp3");
+        Mix_VolumeChunk(AudioManager::getSound("Data/Sound/monster_attack.mp3"), 50);
 
         player.removeHealth(attackDamage);
         damageCooldown.resetToMax();
@@ -179,6 +179,8 @@ void Unit::takeDamage(int damage, Game* game) {
     health -= damage;
     if (health <= 0) {
         if (state != UnitState::Death) { // Chỉ chuyển sang Death nếu chưa ở trạng thái này
+            AudioManager::playSound("Data/Sound/monster_die.mp3");
+            Mix_VolumeChunk(AudioManager::getSound("Data/Sound/monster_die.mp3"), 50);
             setState(UnitState::Death);
             timerDeath.resetToMax();
             frame = 0;
@@ -187,8 +189,8 @@ void Unit::takeDamage(int damage, Game* game) {
                 SDL_Renderer* renderer = game->getRenderer();
                 int numCoins = rand() % 3 + 1;
                 for (int i = 0; i < numCoins; i++) {
-                    AudioManager::playSound("Data/Sound/drop-coin-into-glass-33522.mp3");
-                    Mix_VolumeChunk(AudioManager::getSound("Data/Sound/drop-coin-into-glass-33522.mp3"), 50);
+                    AudioManager::playSound("Data/Sound/coin_drop.mp3");
+                    Mix_VolumeChunk(AudioManager::getSound("Data/Sound/coin_drop.mp3"), 50);
                     Vector2D coinOffset((rand() % 10 - 5) * 0.1f, (rand() % 10 - 5) * 0.1f);
                     game->coins.push_back(std::make_shared<Coin>(pos + coinOffset, renderer));
                 }

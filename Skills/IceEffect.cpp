@@ -44,7 +44,7 @@ void IceEffect::update(float dT, std::vector<std::shared_ptr<Unit>>& listUnits) 
                 float distance = (unit->getPos() - pos).magnitude();
                 if (distance <= radius) {
                     unit->setFrozen(true); // Đóng băng quái
-                    unit->takeDamage(50, nullptr);
+                    unit->takeDamage(5, nullptr);
                     frozenUnits.push_back(unit); // Thêm vào danh sách
                 }
             }

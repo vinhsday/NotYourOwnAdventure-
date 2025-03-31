@@ -34,7 +34,7 @@ public:
 	bool checkOverlap(Vector2D posOther, float sizeOther);
 	bool isAlive();
 	Vector2D getPos();
-	void takeDamage(int damage, Game* game);
+	virtual void takeDamage(int damage, Game* game);
 	bool isDead();
 	void setState(UnitState state_);
 	virtual int getFrameCount();

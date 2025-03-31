@@ -26,6 +26,6 @@ private:
     int frameHeight = 48; // Chiều cao sprite (có thể điều chỉnh)
 
     float damage = 10.0f; // Sát thương gây ra
-    float radius = 1.5f; // Phạm vi vùng lửa
+    float radius = 2.0f; // Phạm vi vùng lửa
     Timer damageCooldown = Timer(1.0f); // Gây sát thương mỗi 0.5 giây
 };

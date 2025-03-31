@@ -23,11 +23,6 @@ Game::Game(SDL_Window* window, SDL_Renderer* renderer, int windowWidth, int wind
 }
 
 void Game::run() {
-    if (!showMenu(renderer_)) {
-        setState(GameState::Quit);
-        return;
-    }
-
     auto time1 = std::chrono::system_clock::now();
     auto time2 = std::chrono::system_clock::now();
     const float dT = 1.0f / 60.0f;
@@ -40,18 +35,16 @@ void Game::run() {
 
         if (timeDeltaFloat >= dT) {
             time1 = time2;
+            std::cout << "Game::run - dT: " << dT << "\n";
             processEvents(renderer_, running);
             update(renderer_, dT, level);
-            if (gameState == GameState::Gameplay || gameState == GameState::GameOver) {
-                draw(renderer_);
-            }
+            draw(renderer_);
             if (gameState == GameState::Quit) {
                 running = false;
             }
         }
     }
 }
-
 Game::~Game() {
     delete player;
     delete hud;
@@ -79,8 +72,8 @@ void Game::processEvents(SDL_Renderer* renderer, bool& running) {
     const Uint8* keyState = SDL_GetKeyboardState(NULL);
     if (keyState[SDL_SCANCODE_1]) {
         if (hud->skills[0].ready()) { // Kiểm tra kỹ năng lửa sẵn sàng
-        AudioManager::playSound("Data/Sound/04_Fire_explosion_04_medium.wav");
-        Mix_VolumeChunk(AudioManager::getSound("Data/Sound/04_Fire_explosion_04_medium.wav"), 50); // 32 là âm lượng nhỏ
+        AudioManager::playSound("Data/Sound/fire.wav");
+        Mix_VolumeChunk(AudioManager::getSound("Data/Sound/fire.wav"), 50); // 32 là âm lượng nhỏ
 
             hud->useSkill(0); // Kích hoạt kỹ năng
             // Offset dựa trên hướng cuối cùng của nhân vật
@@ -94,13 +87,14 @@ void Game::processEvents(SDL_Renderer* renderer, bool& running) {
     }
     if (keyState[SDL_SCANCODE_2]) {
         if (hud->skills[1].ready()) { // Kỹ năng băng là skill thứ 2
-            AudioManager::playSound("Data/Sound/13_Ice_explosion_01.wav");
-            Mix_VolumeChunk(AudioManager::getSound("Data/Sound/13_Ice_explosion_01.wav"), 50); // 32 là âm lượng nhỏ
+            AudioManager::playSound("Data/Sound/ice.wav");
+            Mix_VolumeChunk(AudioManager::getSound("Data/Sound/ice.wav"), 50); // 32 là âm lượng nhỏ
 
             hud->useSkill(1);
             Vector2D icePos = player->getPos() + Vector2D(0.0f, 1.0f);
             IceEffect iceEffect(renderer, icePos);
             addIceEffect(iceEffect);
+            player->currentMP -= 15;
         }
     }
     player->handleInput(keyState, renderer);
@@ -141,7 +135,10 @@ void Game::update(SDL_Renderer* renderer, float dT, Level& level) {
 
             if (!bossSpawned && spawnUnitCount == 0 && allEnemiesDead()) {
                 std::cout << "Tất cả quái đã chết! Spawn boss...\n";
-                triggerBossSpawn();
+                AudioManager::init();
+                AudioManager::playSound("Data/Sound/warning.mp3");
+
+                spawnBoss();
             }
 
             // Kiểm tra Boss chết
@@ -156,6 +153,11 @@ void Game::update(SDL_Renderer* renderer, float dT, Level& level) {
             break;
 
         case GameState::Menu:
+            if (showMenu(renderer)) {
+                gameState = GameState::Gameplay;
+            } else {
+                gameState = GameState::Quit;
+            }
             break;
 
         case GameState::Victory:
@@ -300,14 +302,7 @@ bool Game::allEnemiesDead() {
 }
 
 
-void Game::triggerBossSpawn() {
-    std::cout << "Boss xuất hiện! Hiệu ứng rung đất!\n";
-    for (int i = 0; i < 10; i++) {
-        cameraPos.x += (i % 2 == 0) ? 0.5f : -0.5f;
-        SDL_Delay(30);
-    }
-    spawnBoss();
-}
+
 
 void Game::spawnBoss() {
     if (!renderer_) {
@@ -381,7 +376,7 @@ void Game::updateIceEffects(float dT) {
 bool Game::showMenu(SDL_Renderer* renderer) {
     bool inMenu = true;
     AudioManager::init();
-    AudioManager::playMusic("Data/Sound/Pixel2.ogg", -1);
+    AudioManager::playMusic("Data/Sound/menu_background_music.ogg", -1);
     Mix_VolumeMusic(30);
 
     bool playSelected = false;
@@ -418,19 +413,19 @@ bool Game::showMenu(SDL_Renderer* renderer) {
                 break;
             } else if (event.type == SDL_MOUSEBUTTONDOWN) {
                 if (isHoverPlay) {
-                    AudioManager::playSound("Data/Sound/Wood Block1.mp3");
+                    AudioManager::playSound("Data/Sound/press_button.mp3");
                     playSelected = true;
                     gameState = GameState::Gameplay;
                     inMenu = false;
                 }
                 if (isHoverAbout) {
-                    AudioManager::playSound("Data/Sound/Wood Block1.mp3");
+                    AudioManager::playSound("Data/Sound/press_button.mp3");
                     if (showAboutScreen(renderer)) {
                         inMenu = false;
                     }
                 }
                 if (isHoverStore) {
-                    AudioManager::playSound("Data/Sound/Wood Block1.mp3");
+                    AudioManager::playSound("Data/Sound/press_button.mp3");
                     gameState = GameState::Quit;
                     inMenu = false;              // Thoát vòng lặp menu
                     playSelected = false;        // Đảm bảo không vào Gameplay
@@ -449,7 +444,7 @@ bool Game::showMenu(SDL_Renderer* renderer) {
 
     if (playSelected) {
         Mix_HaltMusic();
-        AudioManager::playMusic("Data/Sound/Pixel 5.mp3", -1);
+        AudioManager::playMusic("Data/Sound/playing_background_music.mp3", -1);
         Mix_VolumeMusic(30);
     }
 
@@ -510,7 +505,7 @@ bool Game::showAboutScreen(SDL_Renderer* renderer) {
                 int mouseY = event.button.y;
 
                 if (isButtonHover) {
-                    AudioManager::playSound("Data/Sound/Wood Block1.mp3");
+                    AudioManager::playSound("Data/Sound/press_button.mp3");
                     inAbout = false;
                 }
             }
@@ -616,13 +611,13 @@ void Game::showGameOverMenu(SDL_Renderer* renderer) {
                     break;
                 case SDL_MOUSEBUTTONDOWN:
                     if (isRestart) {
-                        AudioManager::playSound("Data/Sound/Wood Block1.mp3");
+                        AudioManager::playSound("Data/Sound/press_button.mp3");
                         restartGame();
                         gameState = GameState::Gameplay;
                         selecting = false;
                     }
                     if (isQuit) {
-                        AudioManager::playSound("Data/Sound/Wood Block1.mp3");
+                        AudioManager::playSound("Data/Sound/press_button.mp3");
                         restartGame();
                         if (showMenu(renderer)) {
                             gameState = GameState::Gameplay;
@@ -703,7 +698,7 @@ void Game::showVictoryMenu(SDL_Renderer* renderer) {
                     break;
                 case SDL_MOUSEBUTTONDOWN:
                     if (isMenuHover) {
-                        AudioManager::playSound("Data/Sound/Wood Block1.mp3");
+                        AudioManager::playSound("Data/Sound/press_button.mp3");
                         restartGame(); // Reset game trước khi về menu
                         if (showMenu(renderer)) {
                             gameState = GameState::Gameplay;
@@ -753,8 +748,8 @@ void Game::showPauseMenu(SDL_Renderer* renderer) {
     SDL_Texture* resumeButton = TextureLoader::loadTexture(renderer, "back_button.png");
     SDL_Texture* resumeButtonHover = TextureLoader::loadTexture(renderer, "back03.png");
 
-    SDL_Rect pauseRect = { windowWidth / 2 - 200, windowHeight / 2 - 120, 400, 120 };
-    SDL_Rect resumeRect = { windowWidth / 2 - 50, windowHeight / 2 + 20, 100, 40 };
+    SDL_Rect pauseRect = { windowWidth / 2 - 200, windowHeight / 2 - 120, 400, 150 };
+    SDL_Rect resumeRect = { windowWidth / 2 - 50, windowHeight / 2 - 30, 100, 40 };
 
     while (paused) {
         int mouseX, mouseY;
@@ -770,7 +765,7 @@ void Game::showPauseMenu(SDL_Renderer* renderer) {
                     break;
                 case SDL_MOUSEBUTTONDOWN:
                     if (isResumeHover) {
-                        AudioManager::playSound("Data/Sound/Wood Block1.mp3");
+                        AudioManager::playSound("Data/Sound/press_button.mp3");
                         gameState = GameState::Gameplay; // Tiếp tục game
                         paused = false;
                     }
@@ -795,7 +790,7 @@ void Game::showPauseMenu(SDL_Renderer* renderer) {
 
         // Vẽ khung Pause
         SDL_RenderCopy(renderer, pauseBackground, nullptr, &pauseRect);
-        renderText(renderer, "Game Paused", windowWidth / 2 - 80, windowHeight / 2 - 50, 24);
+        renderText(renderer, "Game Paused", windowWidth / 2 - 75, windowHeight / 2 - 70, 30);
         SDL_RenderCopy(renderer, isResumeHover ? resumeButtonHover : resumeButton, nullptr, &resumeRect);
 
         SDL_RenderPresent(renderer);

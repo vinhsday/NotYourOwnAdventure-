@@ -4,10 +4,10 @@
 
 Boss::Boss(SDL_Renderer* renderer, Vector2D spawnPos)
     : Unit(renderer, spawnPos), renderer_(renderer) {
-    health = 5;
-    maxHealth = 5000;
-    attackDamage = 10;
-    speed = 0.3f;
+    health = 500;
+    maxHealth = 500;
+    attackDamage = 40;
+    speed = 0.5f;
 
     textureRun = TextureLoader::loadTexture(renderer, "Boss_run.png");
     textureAttack = TextureLoader::loadTexture(renderer, "Boss_attack.png");
@@ -62,6 +62,7 @@ void Boss::update(float dT, Level& level, std::vector<std::shared_ptr<Unit>>& li
     animationTimer += dT;
     summonTimer += dT;
 
+    // Xử lý trạng thái Spawning
     if (isSpawning) {
         spawnTimer -= dT;
         if (animationTimer >= frameTimeBoss && currentFrame < spawnFrames.size() - 1) {
@@ -77,11 +78,25 @@ void Boss::update(float dT, Level& level, std::vector<std::shared_ptr<Unit>>& li
         return;
     }
 
-    if (summonTimer >= 5.0f && state != UnitState::Death) {
-        AudioManager::init();
-        AudioManager::playSound("Data/Sound/monster-roar-6985.mp3");
-        Mix_VolumeChunk(AudioManager::getSound("Data/Sound/monster-roar-6985.mp3"), 50);
+    // Xử lý trạng thái Hurt
+    if (state == UnitState::Hurt) {
+        hurtTimer -= dT;
+        if (animationTimer >= frameTimeBoss && currentFrame < hurtFrames.size() - 1) {
+            animationTimer = 0.0f;
+            currentFrame++;
+        }
+        if (hurtTimer <= 0.0f) {
+            state = previousState; // Quay lại trạng thái trước đó
+            currentFrame = 0;
+            animationTimer = 0.0f;
+        }
+        return;
+    }
 
+    // Xử lý các trạng thái khác (Idle, Death, Attack, Run)
+    if (summonTimer >= 5.0f && state != UnitState::Death) {
+        AudioManager::playSound("Data/Sound/boss_roar.mp3");
+        Mix_VolumeChunk(AudioManager::getSound("Data/Sound/boss_roar.mp3"), 50);
         isIdle = true;
         isSummoning = true;
         summonTimer = 0.0f;
@@ -165,31 +180,30 @@ void Boss::draw(SDL_Renderer* renderer, int tileSize, Vector2D cameraPos) {
         switch (state) {
             case UnitState::Run: currentTexture = textureRun; currentFrameRect = runFrames[currentFrame]; break;
             case UnitState::Attack: currentTexture = textureAttack; currentFrameRect = attackFrames[attackFrame]; break;
-            case UnitState::Hurt: currentTexture = textureHurt; currentFrameRect = hurtFrames[currentFrame]; break;
+            case UnitState::Hurt:
+                currentTexture = textureHurt;
+                currentFrameRect = hurtFrames[currentFrame];
+                std::cout << "Boss in Hurt state, frame: " << currentFrame << "\n";
+                break;
             case UnitState::Death: currentTexture = textureDeath; currentFrameRect = deathFrames[currentFrame]; break;
             case UnitState::Idle: default: currentTexture = idleTexture; currentFrameRect = idleFrames[currentFrame]; break;
         }
     }
 
     if (currentTexture) {
-        // Căn giữa boss tại pos
         int xPos = std::round((pos.x - cameraPos.x) * tileSize) - (frameWidth / 2);
         int yPos = std::round((pos.y - cameraPos.y) * tileSize) - (frameHeight / 2);
-        SDL_Rect destRect = {xPos, yPos, frameWidth * 2, frameHeight * 2}; // 240x240
+        SDL_Rect destRect = {xPos, yPos, frameWidth * 2, frameHeight * 2};
         SDL_RenderCopy(renderer, currentTexture, &currentFrameRect, &destRect);
-
-        // Debug vị trí vẽ
-        std::cout << "Boss drawn at screen pos: (" << xPos << ", " << yPos << "), Logic pos: ("
-                  << pos.x << ", " << pos.y << "), Camera: (" << cameraPos.x << ", " << cameraPos.y << ")\n";
+        std::cout << "Boss drawn at screen pos: (" << xPos << ", " << yPos << ")\n";
     } else {
-        std::cout << "Error: No valid texture for Boss in state " << static_cast<int>(state) << std::endl;
+        std::cout << "Error: No valid texture for Boss in state " << static_cast<int>(state) << "\n";
     }
 
     if (isAlive()) {
         drawHealthBar(renderer, tileSize, cameraPos);
     }
 }
-
 void Boss::summonMinions(SDL_Renderer* renderer, Level& level, std::vector<std::shared_ptr<Unit>>& listUnits) {
     if (!isSummoning || !renderer) return;
 
@@ -232,3 +246,22 @@ void Boss::drawHealthBar(SDL_Renderer* renderer, int tileSize, Vector2D cameraPo
     SDL_RenderFillRect(renderer, &bar);
 }
 
+void Boss::takeDamage(int damage, Game* game) {
+    if (state == UnitState::Death || isSpawning) return; // Không nhận sát thương khi chết hoặc đang spawn
+
+    health -= damage;
+    std::cout << "Boss took " << damage << " damage, health now: " << health << "\n";
+
+    if (health > 0 && state != UnitState::Hurt) {
+        previousState = state; // Lưu trạng thái trước đó
+        state = UnitState::Hurt;
+        hurtTimer = hurtDuration; // Đặt thời gian bị thương
+        currentFrame = 0; // Bắt đầu animation Hurt từ frame 0
+        animationTimer = 0.0f;
+        AudioManager::playSound("Data/Sound/boss_hurt.mp3"); // Thêm âm thanh nếu có
+    } else if (health <= 0) {
+        state = UnitState::Death;
+        currentFrame = 0;
+        animationTimer = 0.0f;
+    }
+}

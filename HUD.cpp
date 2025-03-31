@@ -14,8 +14,8 @@ HUD::HUD(SDL_Renderer* renderer, Player* player) : player(player) {
 
     volumeSlider.x = volumeBar.x + (volume * volumeBar.w / 128); // Đặt vị trí slider theo volume mặc định
 
-    pauseTexture = TextureLoader::loadTexture(renderer, "pause_one.png");
-    pauseHoverTexture = TextureLoader::loadTexture(renderer, "pause_one_hover.png");
+    pauseTexture = TextureLoader::loadTexture(renderer, "pause01.png");
+    pauseHoverTexture = TextureLoader::loadTexture(renderer, "pause03.png");
     quitTexture = TextureLoader::loadTexture(renderer, "back_button.png");
     quitHoverTexture = TextureLoader::loadTexture(renderer, "back03.png");
 }
@@ -205,7 +205,9 @@ bool HUD::handleInput(SDL_Event& event, Game* game) {
                 else if (mouseX >= quitButton.x && mouseX <= quitButton.x + quitButton.w &&
                          mouseY >= quitButton.y && mouseY <= quitButton.y + quitButton.h) {
                     AudioManager::playSound("Data/Sound/Wood Block1.mp3");
-                    game->setState(GameState::Quit); // Chuyển sang trạng thái Quit
+                    game->restartGame();
+                    game->setState(GameState::Menu); // Chuyển sang trạng thái Quit
+
                     return true;
                 }
             }

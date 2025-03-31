@@ -3,8 +3,10 @@
 #include "Support/AudioManager.h"
 
 Player::Player(Game* gamePtr, SDL_Renderer* renderer, Vector2D startPos)
-    : game(gamePtr), pos(startPos), lastDirection(0) {
-
+    : game(gamePtr), pos(startPos), lastDirection(0),
+      currentHP(100), maxHP(100), currentMP(50), maxMP(100),
+      isAttacking(false), frame(0), frameTimer(0.0f), speed(5.0f),
+      attackDamage(10), attackRange(1.5f), level(1), coin(0), isDead(false) {
     textureIdleLeft = TextureLoader::loadTexture(renderer, "Idle_left.png");
     textureIdleRight = TextureLoader::loadTexture(renderer, "Idle_right.png");
     textureRunLeft = TextureLoader::loadTexture(renderer, "Run_left.png");
@@ -14,10 +16,13 @@ Player::Player(Game* gamePtr, SDL_Renderer* renderer, Vector2D startPos)
     textureHurt = TextureLoader::loadTexture(renderer, "Hurt.png");
     textureDeath = TextureLoader::loadTexture(renderer, "Death.png");
 
+    shootCooldown = Timer(0.5f);
+    damageCooldown = Timer(0.5f);
+    hurtTimer = Timer(0.5f);
+    deathTimer = Timer(2.0f);
 
-
-    if (!textureIdleLeft || !textureRunLeft || !textureAttack1 ||
-        !textureRunRight ) {
+    if (!textureIdleLeft || !textureRunLeft || !textureAttack1 || !textureRunRight) {
+        std::cout << "Error loading player textures!\n";
     }
 }
 
@@ -46,13 +51,13 @@ void Player::handleInput(const Uint8* keyState, SDL_Renderer* renderer) {
         if (down)  direction.y += 1;
         if (left)  {
     direction.x -= 1;
-    AudioManager::playSound("Data/Sound/Retro FootStep Grass 01.wav");
-    Mix_VolumeChunk(AudioManager::getSound("Data/Sound/Retro FootStep Grass 01.wav"), 10); // 32 là âm lượng nhỏ
+    AudioManager::playSound("Data/Sound/footstep.wav");
+    Mix_VolumeChunk(AudioManager::getSound("Data/Sound/footstep.wav"), 10); // 32 là âm lượng nhỏ
 }
 if (right) {
     direction.x += 1;
-    AudioManager::playSound("Data/Sound/Retro FootStep Grass 01.wav");
-    Mix_VolumeChunk(AudioManager::getSound("Data/Sound/Retro FootStep Grass 01.wav"), 10);
+    AudioManager::playSound("Data/Sound/footstep.wav");
+    Mix_VolumeChunk(AudioManager::getSound("Data/Sound/footstep.wav"), 10);
 }
 
         }
@@ -63,8 +68,8 @@ if (right) {
 
 
     if (keyState[SDL_SCANCODE_K] && !isAttacking ) {
-        AudioManager::playSound("Data/Sound/punch-body-hit-joshua-chivers-2-2-00-00.mp3");
-        Mix_VolumeChunk(AudioManager::getSound("Data/Sound/punch-body-hit-joshua-chivers-2-2-00-00.mp3"), 30); // 32 là âm lượng nhỏ
+        AudioManager::playSound("Data/Sound/player_attack.mp3");
+        Mix_VolumeChunk(AudioManager::getSound("Data/Sound/player_attack.mp3"), 30); // 32 là âm lượng nhỏ
 
     }
     if (!isAttacking) {
@@ -81,6 +86,15 @@ void Player::update(float dT,
 
     // Lưu trạng thái trước đó để kiểm tra thay đổi animation
     PlayerState previousState = state;
+
+   std::cout << "Update called - dT: " << dT << ", currentMP: " << currentMP << ", maxMP: " << maxMP << "\n";
+    if (currentMP < maxMP) {
+        currentMP += dT * 5.0f;
+        if (currentMP > maxMP) currentMP = maxMP;
+        std::cout << "Mana increased to: " << currentMP << "\n";
+    } else {
+        std::cout << "Mana full: " << currentMP << "/" << maxMP << "\n";
+    }
 
     if (state == PlayerState::Death) {
         deathTimer.countDown(dT);
@@ -233,11 +247,6 @@ AudioManager::init();
     // Cập nhật cooldown sát thương
     damageCooldown.countDown(dT);
 
-    // Hồi mana tự động
-    if (currentMP < maxMP) {
-        currentMP += dT * 5;  // Hồi 5 MP mỗi giây
-        if (currentMP > maxMP) currentMP = maxMP;
-    }
 
     // Giữ HP trong giới hạn
     if (currentHP > maxHP) currentHP = maxHP;
@@ -316,8 +325,8 @@ void Player::removeHealth(int damage) {
     frame = 0;  // 🚀 Reset frame Hurt để chắc chắn animation chạy từ đầu
 
      if (currentHP <= 0) {
-        AudioManager::playSound("Data/Sound/male-death-sound-128357.mp3");
-        Mix_VolumeChunk(AudioManager::getSound("Data/Sound/male-death-sound-128357.mp3"), 100); // 32 là âm lượng nhỏ
+        AudioManager::playSound("Data/Sound/player_die.mp3");
+        Mix_VolumeChunk(AudioManager::getSound("Data/Sound/player_die.mp3"), 100);
 
         currentHP = 0;
         state = PlayerState::Death;

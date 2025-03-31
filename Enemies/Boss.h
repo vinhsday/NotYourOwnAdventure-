@@ -10,7 +10,7 @@ public:
     int getHealth() { return health; }
     void summonMinions(SDL_Renderer* renderer, Level& level, std::vector<std::shared_ptr<Unit>>& listUnits);
     SDL_Rect getHitbox() const;
-
+    void takeDamage(int damage, Game* game) override;
 private:
     void loadAnimations(SDL_Texture* spriteSheet, std::vector<SDL_Rect>& frames, int frameCount);
     void drawHealthBar(SDL_Renderer* renderer, int tileSize, Vector2D cameraPos);
@@ -47,4 +47,8 @@ private:
 
     int frameWidth = 120;
     int frameHeight = 120;
+
+    float hurtTimer = 0.0f; // Thời gian bị thương
+    const float hurtDuration = 0.5f; // Thời gian chạy animation Hurt (0.5 giây)
+    UnitState previousState;
 };

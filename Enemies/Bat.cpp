@@ -15,10 +15,10 @@ Bat::Bat(SDL_Renderer* renderer, Vector2D setPos)
     if (!textureDeath) std::cerr << "Error: Failed to load Bat-Die.png" << std::endl;
 
     // Thiết lập thông số
-    this->speed = 1.2f;
-    this->health = 50;
-    this->maxHealth = 50;
-    this->attackDamage = 15;
+    this->speed = 2.0f;
+    this->health = 30;
+    this->maxHealth = 30;
+    this->attackDamage = 20;
     this->attackRange = 0.7f;
 
     // Đảm bảo trạng thái ban đầu

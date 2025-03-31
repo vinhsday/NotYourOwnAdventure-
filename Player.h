@@ -50,7 +50,7 @@ public:
 
     int getLastDirection(){return lastDirection;}
 
-    int currentMP = 50;
+    float currentMP = 50;
 
     bool isDead = false;
 
@@ -82,7 +82,7 @@ private:
 
 
 
-    Timer shootCooldown = Timer(0.3f); // Khoảng cách giữa các lần bắn
+    Timer shootCooldown = Timer(0.7f); // Khoảng cách giữa các lần bắn
 
 
 
@@ -110,11 +110,11 @@ private:
     int attackDamage = 10;
     int maxHP = 100;
     int currentHP = 100;
-    int maxMP = 50;
+    float maxMP = 50;
     int coin = 0;
 
 
-    Timer damageCooldown = Timer(1.0f); // 1 giây giữa mỗi lần nhận damage
+    Timer damageCooldown = Timer(0.7f); // 1 giây giữa mỗi lần nhận damage
 
 
     Timer hurtTimer { 0.5f, 0.0f }; // ⏳ Nhấp nháy 0.5 giây khi bị đánh

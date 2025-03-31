@@ -36,6 +36,6 @@ private:
     int frameWidth = 256/8;          // 480px chia 6 = 80px mỗi frame
     int frameHeight = 32;              // Chiều cao sprite sheet (48px)
 
-    float radius = 100.0f;               // Phạm vi đóng băng
+    float radius = 20.0f;               // Phạm vi đóng băng
     std::vector<std::shared_ptr<Unit>> frozenUnits; // Danh sách quái bị đóng băng
 };

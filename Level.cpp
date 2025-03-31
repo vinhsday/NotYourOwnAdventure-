@@ -347,14 +347,14 @@ void Level::checkPotionPickup(Vector2D characterPosition, Player* player) {
             size_t index = std::distance(potionPositions.begin(), it);
             if (potionTextures[index] == potionHealthTexture) {
                 player->increaseHealth(); // Tăng máu
-                AudioManager::playSound("Data/Sound/02_Heal_02.wav");
-                Mix_VolumeChunk(AudioManager::getSound("Data/Sound/02_Heal_02.wav"), 50); // 32 là âm lượng nhỏ
+                AudioManager::playSound("Data/Sound/heal.wav");
+                Mix_VolumeChunk(AudioManager::getSound("Data/Sound/heal.wav"), 50); // 32 là âm lượng nhỏ
 
 
             } else if (potionTextures[index] == potionManaTexture) {
                 player->levelUp(); // Tăng cấp
-                AudioManager::playSound("Data/Sound/16_Atk_buff_04.wav");
-                Mix_VolumeChunk(AudioManager::getSound("Data/Sound/16_Atk_buff_04.wav"), 50); // 32 là âm lượng nhỏ
+                AudioManager::playSound("Data/Sound/levelup.wav");
+                Mix_VolumeChunk(AudioManager::getSound("Data/Sound/levelup.wav"), 50); // 32 là âm lượng nhỏ
             }
 
             // Xóa potion khỏi danh sách
