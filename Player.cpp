@@ -343,7 +343,8 @@ void Player::increaseHealth() {
 
 void Player::levelUp() {
     level++;
-    attackDamage += 5;
+    maxHP += 5;
+    attackDamage += 3;
     std::cout << "🟢 Level Up! Cấp hiện tại: " << level << "\n";
 }
 
