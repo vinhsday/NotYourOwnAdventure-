@@ -80,8 +80,7 @@ if (right) {
 }
 
 
-void Player::update(float dT,
-                    std::vector<std::shared_ptr<Unit>>& listUnits, SDL_Renderer* renderer, Level& level) {
+void Player::update(float dT, std::vector<std::shared_ptr<Unit>>& listUnits, SDL_Renderer* renderer, Level& level) {
     hurtTimer.countDown(dT);
 
     // Lưu trạng thái trước đó để kiểm tra thay đổi animation
@@ -126,10 +125,6 @@ void Player::update(float dT,
         return;  // 🛑 Không update nếu vẫn còn bị Hurt
     }
 }
-
-
-
-
 
 
     // Xử lý phím

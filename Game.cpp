@@ -272,7 +272,7 @@ void Game::addUnit(SDL_Renderer* renderer, Vector2D posMouse) {
 
 void Game::updateCamera() {
     Vector2D targetPos = player->getPos();
-
+    std::cout<< player->getPos().x << " " << player->getPos().y;
     // Tính vị trí mục tiêu của camera
     Vector2D targetCameraPos;
     targetCameraPos.x = targetPos.x - (windowWidth / (2 * tileSize));
