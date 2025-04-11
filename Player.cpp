@@ -5,7 +5,7 @@
 Player::Player(Game* gamePtr, SDL_Renderer* renderer, Vector2D startPos)
     : game(gamePtr), pos(startPos), lastDirection(0),
       currentHP(100), maxHP(100), currentMP(100), maxMP(100),
-      isAttacking(false), frame(0), frameTimer(0.0f), speed(5.0f),
+      isAttacking(false), frame(0), frameTimer(0.0f), speed(3.0f),
       attackDamage(10), attackRange(1.5f), level(1), coin(0), isDead(false) {
     textureIdleLeft = TextureLoader::loadTexture(renderer, "Idle_left.png");
     textureIdleRight = TextureLoader::loadTexture(renderer, "Idle_right.png");
@@ -61,11 +61,6 @@ if (right) {
 }
 
         }
-
-
-
-
-
 
     if (keyState[SDL_SCANCODE_K] && !isAttacking ) {
         AudioManager::playSound("Data/Sound/player_attack.mp3");
@@ -216,7 +211,6 @@ void Player::update(float dT, std::vector<std::shared_ptr<Unit>>& listUnits, SDL
     }
 
 
-    // Cập nhật đạn
 
     // Làm mượt vị trí nhân vật
     smoothPos = smoothPos + (pos - smoothPos) * 0.2f;
@@ -236,12 +230,8 @@ AudioManager::init();
         }
     }
 }
-
-
-
     // Cập nhật cooldown sát thương
     damageCooldown.countDown(dT);
-
 
     // Giữ HP trong giới hạn
     if (currentHP > maxHP) currentHP = maxHP;
@@ -360,6 +350,7 @@ void Player::reset() {
     coin = 0;
     level = 1;
     attackDamage = 10; // Hoặc giá trị mặc định ban đầu
+
     std::cout << "🟢 Nhân vật đã được hồi sinh!\n";
 }
 

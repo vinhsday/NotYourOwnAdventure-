@@ -12,6 +12,7 @@ class Game;  // Khai báo trước để tránh lỗi
 class Level;
 
 
+
 enum class PlayerState {
     IdleLeft,
     IdleRight,
@@ -117,7 +118,7 @@ private:
     Timer damageCooldown = Timer(0.7f); // 1 giây giữa mỗi lần nhận damage
 
 
-    Timer hurtTimer { 0.5f, 0.0f }; // ⏳ Nhấp nháy 0.5 giây khi bị đánh
+    Timer hurtTimer { 0.5f, 0.0f }; //  Nhấp nháy 0.5 giây khi bị đánh
 
 
     PlayerState prevStateBeforeHurt;

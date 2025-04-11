@@ -39,6 +39,10 @@ void HUD::update(float dT, const std::vector<std::shared_ptr<Unit>>& units) {
     if (!player->isDead) {
         survivalTime += dT;
     }
+    else {
+        survivalTime = 0.0f;
+    }
+
 
     // Đếm số kẻ thù còn lại
     enemyCount = 0;

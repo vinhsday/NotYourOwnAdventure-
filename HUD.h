@@ -36,10 +36,12 @@ public:
 
     std::vector<Skill> skills;
 
+    float survivalTime = 0.0f;
+    void resetSurvivalTime() {survivalTime = 0.0f;}
+
 private:
     Player* player;
     SDL_Texture* playerAvatar;
-    float survivalTime = 0.0f;
     int enemyCount = 0;
 
     // Thanh trượt âm lượng (đặt trong khung HUD)

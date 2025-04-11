@@ -19,7 +19,7 @@ Level::Level(SDL_Renderer* renderer, int setTileCountX, int setTileCountY)
     // Thêm dòng này để tạo vị trí cho vật trang trí
     generateDecorPositions();
 
-    // Add enemy spawners at corners
+    // Thêm địch vào các góc
     int xMax = tileCountX - 1;
     int yMax = tileCountY - 1;
     setTileType(0, 0, TileType::enemySpawner);
@@ -36,20 +36,20 @@ Level::Level(SDL_Renderer* renderer, int setTileCountX, int setTileCountY)
 void Level::generateDecorPositions() {
     decorPositions.clear();
     int numDecor = 7;  // Số lượng đồ trang trí
-    float minSpacing = 3.0f; // 📏 Khoảng cách tối thiểu giữa các đồ trang trí (đơn vị tile)
+    float minSpacing = 3.0f; //  Khoảng cách tối thiểu giữa các đồ trang trí (đơn vị tile)
 
     for (int i = 0; i < numDecor; i++) {
         bool validPosition = false;
         Vector2D newDecor;
 
-        // 🔄 Lặp lại cho đến khi tìm được vị trí hợp lệ
+        //  Lặp lại cho đến khi tìm được vị trí hợp lệ
         while (!validPosition) {
             int randX = rand() % tileCountX;
             int randY = rand() % tileCountY;
             newDecor = Vector2D(randX, randY);
             validPosition = true;
 
-            // 🔍 Kiểm tra khoảng cách với các vật trang trí đã đặt
+            //  Kiểm tra khoảng cách với các vật trang trí đã đặt
             for ( auto& decor : decorPositions) {
                 if ((decor - newDecor).magnitude() < minSpacing) {
                     validPosition = false;
@@ -144,7 +144,7 @@ void Level::spawnPotions() {
 
 
 Vector2D Level::getRandomEnemySpawnerLocation() {
-    //Create a list of all tiles that are enemy spawners.
+// Tạo danh sách ô quái được spawn
     std::vector<int> listSpawnerIndices;
     for (int count = 0; count < listTiles.size(); count++) {
         auto& tileSelected = listTiles[count];
@@ -152,7 +152,7 @@ Vector2D Level::getRandomEnemySpawnerLocation() {
             listSpawnerIndices.push_back(count);
     }
 
-    //If one or more spawners are found, pick one at random and output it's center position.
+// Nếu có 1 hoặc nhiều con đc spawn thì chọn ngẫu nhiên 1 con ở vị trí trung tâm ô gạch
     if (listSpawnerIndices.empty() == false) {
         int index = listSpawnerIndices[rand() % listSpawnerIndices.size()];
         return Vector2D((float)(index % tileCountX) + 0.5f, (float)(index / tileCountX) + 0.5f);
@@ -188,20 +188,19 @@ void Level::setTileType(int x, int y, TileType tileType) {
 
 
 void Level::calculateFlowField() {
-    //Ensure the target is in bounds.
+// Đảm bảo các con quái ở bounds
     int indexTarget = targetX + targetY * tileCountX;
     if (indexTarget > -1 && indexTarget < listTiles.size() &&
         targetX > -1 && targetX < tileCountX &&
         targetY > -1 && targetY < tileCountY) {
 
-        //Reset the tile flow data.
+// Reset lại cái flow field
         for (auto& tileSelected : listTiles) {
             tileSelected.flowDirectionX = 0;
             tileSelected.flowDirectionY = 0;
             tileSelected.flowDistance = flowDistanceMax;
         }
-
-        //Calculate the flow field.
+// Tính toán cái flow field
         calculateDistances();
         calculateFlowDirections();
     }
@@ -211,35 +210,35 @@ void Level::calculateFlowField() {
 void Level::calculateDistances() {
     int indexTarget = targetX + targetY * tileCountX;
 
-    //Create a queue that will contain the indices to be checked.
+//Tạo một hàng đợi chứa các chỉ số cần được kiểm tra.
     std::queue<int> listIndicesToCheck;
-    //Set the target tile's flow value to 0 and add it to the queue.
+//Đặt giá trị dòng chảy (flow) của ô mục tiêu thành 0 và thêm nó vào hàng đợi.
     listTiles[indexTarget].flowDistance = 0;
     listIndicesToCheck.push(indexTarget);
 
-    //The offset of the neighboring tiles to be checked.
+//Độ lệch của các ô lân cận cần được kiểm tra.
     const int listNeighbors[][2] = { { -1, 0}, {1, 0}, {0, -1}, {0, 1} };
 
-    //Loop through the queue and assign distance to each tile.
+//Lặp qua hàng đợi và gán khoảng cách cho từng ô.
     while (listIndicesToCheck.empty() == false) {
         int indexCurrent = listIndicesToCheck.front();
         listIndicesToCheck.pop();
 
-        //Check each of the neighbors;
+//Kiểm tra từng ô lân cận;
         for (int count = 0; count < 4; count++) {
             int neighborX = listNeighbors[count][0] + indexCurrent % tileCountX;
             int neighborY = listNeighbors[count][1] + indexCurrent / tileCountX;
             int indexNeighbor = neighborX + neighborY * tileCountX;
 
-            //Ensure that the neighbor exists and isn't a wall.
+//Đảm bảo rằng ô lân cận tồn tại và không phải là tường.
             if (indexNeighbor > -1 && indexNeighbor < listTiles.size() &&
                 neighborX > -1 && neighborX < tileCountX &&
                 neighborY > -1 && neighborY < tileCountY &&
                 listTiles[indexNeighbor].type != TileType::wall) {
 
-                //Check if the tile has been assigned a distance yet or not.
+//Kiểm tra xem ô đó đã được gán khoảng cách hay chưa.
                 if (listTiles[indexNeighbor].flowDistance == flowDistanceMax) {
-                    //If not the set it's distance and add it to the queue.
+//Nếu chưa thì gán khoảng cách cho nó và thêm vào hàng đợi.
                     listTiles[indexNeighbor].flowDistance = listTiles[indexCurrent].flowDistance + 1;
                     listIndicesToCheck.push(indexNeighbor);
                 }
@@ -250,15 +249,15 @@ void Level::calculateDistances() {
 
 
 void Level::calculateFlowDirections() {
-    //The offset of the neighboring tiles to be checked.
+//Độ lệch của các ô lân cận cần được kiểm tra.
     const int listNeighbors[][2] = {
         {-1, 0}, {-1, 1}, {0, 1}, {1, 1},
         {1, 0}, {1, -1}, {0, -1}, {-1, -1} };
 
     for (int indexCurrent = 0; indexCurrent < listTiles.size(); indexCurrent++) {
-        //Ensure that the tile has been assigned a distance value.
+//Đảm bảo rằng ô đã được gán giá trị khoảng cách.
         if (listTiles[indexCurrent].flowDistance != flowDistanceMax) {
-            //Set the best distance to the current tile's distance.
+//Đặt khoảng cách tốt nhất bằng khoảng cách của ô hiện tại.
             unsigned char flowFieldBest = listTiles[indexCurrent].flowDistance;
 
             //Check each of the neighbors;
@@ -270,11 +269,11 @@ void Level::calculateFlowDirections() {
                 int neighborY = offsetY + indexCurrent / tileCountX;
                 int indexNeighbor = neighborX + neighborY * tileCountX;
 
-                //Ensure that the neighbor exists.
+                //Đảm bảo lân cận tồn tại
                 if (indexNeighbor > -1 && indexNeighbor < listTiles.size() &&
                     neighborX > -1 && neighborX < tileCountX &&
                     neighborY > -1 && neighborY < tileCountY) {
-                    //If the current neighbor's distance is lower than the best then use it.
+//Nếu khoảng cách của ô lân cận hiện tại thấp hơn khoảng cách tốt nhất, thì sử dụng nó.
                     if (listTiles[indexNeighbor].flowDistance < flowFieldBest) {
                         flowFieldBest = listTiles[indexNeighbor].flowDistance;
                         listTiles[indexCurrent].flowDirectionX = offsetX;
@@ -313,7 +312,6 @@ void Level::drawDecor(SDL_Renderer* renderer, float camX, float camY) {
         SDL_Rect decorRect = { xPos, yPos, 128, 128 };
         SDL_Texture* texture = decorTextures[i % decorTextures.size()];
 
-        // Debug: In tọa độ để kiểm tra
 
         SDL_RenderCopy(renderer, texture, NULL, &decorRect);
     }
@@ -348,13 +346,13 @@ void Level::checkPotionPickup(Vector2D characterPosition, Player* player) {
             if (potionTextures[index] == potionHealthTexture) {
                 player->increaseHealth(); // Tăng máu
                 AudioManager::playSound("Data/Sound/heal.wav");
-                Mix_VolumeChunk(AudioManager::getSound("Data/Sound/heal.wav"), 50); // 32 là âm lượng nhỏ
+                Mix_VolumeChunk(AudioManager::getSound("Data/Sound/heal.wav"), 50);
 
 
             } else if (potionTextures[index] == potionManaTexture) {
                 player->levelUp(); // Tăng cấp
                 AudioManager::playSound("Data/Sound/levelup.wav");
-                Mix_VolumeChunk(AudioManager::getSound("Data/Sound/levelup.wav"), 50); // 32 là âm lượng nhỏ
+                Mix_VolumeChunk(AudioManager::getSound("Data/Sound/levelup.wav"), 50);
             }
 
             // Xóa potion khỏi danh sách

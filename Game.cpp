@@ -672,6 +672,7 @@ void Game::restartGame() {
     spawnUnitCount = 15;
     gameOver = false;
     gameState = GameState::Gameplay;
+    hud->survivalTime = 0.0f;
 }
 
 void Game::showVictoryMenu(SDL_Renderer* renderer) {
