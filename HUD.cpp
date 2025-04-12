@@ -10,14 +10,14 @@ HUD::HUD(SDL_Renderer* renderer, Player* player) : player(player) {
         std::cout << "⚠️ HUD: Failed to load player avatar!" << std::endl;
     }
 
-    // Khởi tạo âm lượng ban đầu
 
-    volumeSlider.x = volumeBar.x + (volume * volumeBar.w / 128); // Đặt vị trí slider theo volume mặc định
 
     pauseTexture = TextureLoader::loadTexture(renderer, "pause01.png");
     pauseHoverTexture = TextureLoader::loadTexture(renderer, "pause03.png");
     quitTexture = TextureLoader::loadTexture(renderer, "back_button.png");
     quitHoverTexture = TextureLoader::loadTexture(renderer, "back03.png");
+    speakerTexture = TextureLoader::loadTexture(renderer, "loa_icon1.png");
+    silentTexture = TextureLoader::loadTexture(renderer, "loa_icon2.png");
 }
 
 void HUD::addSkill(SDL_Texture* icon, float maxCooldown) {
@@ -73,14 +73,6 @@ void HUD::draw(SDL_Renderer* renderer) {
     std::string timeStr = "Time: " + std::to_string(minutes) + ":" + (seconds < 10 ? "0" : "") + std::to_string(seconds);
     renderText(renderer, timeStr, 650, 30, 16, {255, 255, 255});
 
-    // Vẽ thanh trượt âm lượng trong khung HUD
-    renderText(renderer, "Vol", volumeBar.x - 40, volumeBar.y - 5, 16, {255, 255, 255}); // Nhãn "Vol" ngắn gọn
-    SDL_SetRenderDrawColor(renderer, 100, 100, 100, 255); // Nền thanh âm lượng
-    SDL_RenderFillRect(renderer, &volumeBar);
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255); // Viền
-    SDL_RenderDrawRect(renderer, &volumeBar);
-    SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255); // Slider màu xanh
-    SDL_RenderFillRect(renderer, &volumeSlider);
 
 
     // Vẽ nút Pause và Quit
@@ -93,6 +85,7 @@ void HUD::draw(SDL_Renderer* renderer) {
 
     SDL_RenderCopy(renderer, isHoverPause ? pauseHoverTexture : pauseTexture, NULL, &pauseButton);
     SDL_RenderCopy(renderer, isHoverQuit ? quitHoverTexture : quitTexture, NULL, &quitButton);
+    SDL_RenderCopy(renderer, isMuted ? silentTexture : speakerTexture, NULL, &speakerButton);
     int x = 50, y = 500;
     int iconSize = 50;
     for (auto& skill : skills) {
@@ -191,15 +184,10 @@ void HUD::renderText(SDL_Renderer* renderer, const std::string& text, int x, int
 bool HUD::handleInput(SDL_Event& event, Game* game) {
     switch (event.type) {
         case SDL_MOUSEBUTTONDOWN:
-            if (event.button.button == SDL_BUTTON_LEFT) {
-                int mouseX = event.button.x;
-                int mouseY = event.button.y;
-                if (mouseX >= volumeSlider.x && mouseX <= volumeSlider.x + volumeSlider.w &&
-                    mouseY >= volumeSlider.y && mouseY <= volumeSlider.y + volumeSlider.h) {
-                    draggingVolume = true;
-                }
+        int mouseX = event.button.x;
+        int mouseY = event.button.y;
             // Xử lý nút Pause
-                else if (mouseX >= pauseButton.x && mouseX <= pauseButton.x + pauseButton.w &&
+               if (mouseX >= pauseButton.x && mouseX <= pauseButton.x + pauseButton.w &&
                          mouseY >= pauseButton.y && mouseY <= pauseButton.y + pauseButton.h) {
                     AudioManager::playSound("Data/Sound/Wood Block1.mp3");
                     game->setState(GameState::Paused); // Chuyển sang trạng thái Paused
@@ -214,27 +202,22 @@ bool HUD::handleInput(SDL_Event& event, Game* game) {
 
                     return true;
                 }
-            }
-            break;
+                 else if (mouseX >= speakerButton.x && mouseX <= speakerButton.x + speakerButton.w &&
+                          mouseY >= speakerButton.y && mouseY <= speakerButton.y + speakerButton.h) {
+                     AudioManager::playSound("Data/Sound/Wood Block1.mp3");
+                     isMuted = !isMuted;
+                 if (isMuted){
+                    Mix_HaltMusic();
+                }
+                 else {
+                    AudioManager::playMusic("Data/Sound/playing_background_music.mp3", -1);
+                    Mix_VolumeMusic(30);
+                }
+                return true;
+                }
 
-        case SDL_MOUSEBUTTONUP:
-            if (event.button.button == SDL_BUTTON_LEFT) {
-                draggingVolume = false;
-            }
-            break;
-
-        case SDL_MOUSEMOTION:
-            if (draggingVolume) {
-                int mouseX = event.motion.x;
-                // Giới hạn slider trong thanh volumeBar
-                volumeSlider.x = std::max(volumeBar.x, std::min(mouseX - volumeSlider.w / 2, volumeBar.x + volumeBar.w - volumeSlider.w));
-                // Tính giá trị volume từ vị trí slider (0-128)
-                volume = ((volumeSlider.x - volumeBar.x) * 128) / volumeBar.w;
-                Mix_VolumeMusic(volume); // Điều chỉnh âm lượng nhạc
-                // Điều chỉnh âm lượng hiệu ứng âm thanh nếu cần
-                // Ví dụ: Mix_VolumeChunk(AudioManager::getSound("Data/Sound/Wood Block1.mp3"), volume);
-            }
             break;
     }
-    return draggingVolume; // Trả về true nếu đang kéo slider
+
+
 }
